@@ -1,0 +1,13 @@
+{
+  "name": "folder-structure-app-root",
+  "version": "1.0.0",
+  "description": "Folder Structure Management Application",
+  "scripts": {
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && deno task dev",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

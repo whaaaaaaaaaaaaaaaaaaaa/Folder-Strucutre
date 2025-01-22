@@ -1,0 +1,11 @@
+{
+  "tasks": {
+    "dev": "deno run --watch --allow-net --allow-read --allow-write --allow-env --allow-run --allow-ffi main.ts"
+  },
+  "imports": {
+    "oak": "https://deno.land/x/oak@v12.6.1/mod.ts",
+    "sqlite": "https://deno.land/x/sqlite@v3.8/mod.ts",
+    "std/": "https://deno.land/std@0.208.0/",
+    "@db/sqlite": "jsr:@db/sqlite@0.12"
+  }
+}
