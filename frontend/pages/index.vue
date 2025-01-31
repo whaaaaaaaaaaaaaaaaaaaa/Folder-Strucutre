@@ -1,9 +1,5 @@
 <template>
   <div class="container">
-    <div class="header">
-      <h1>Folder Structure Explorer</h1>
-      <p class="subtitle">Import, organize, and manage your directory structure</p>
-    </div>
     <FileExplorer />
   </div>
 </template>

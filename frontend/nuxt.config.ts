@@ -1,7 +1,14 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: [],
   devtools: { enabled: true },
+
+  modules: [
+    '@pinia/nuxt',
+    'shadcn-nuxt',
+    '@nuxtjs/tailwindcss'
+  ],
+
+  css: ['~/assets/css/main.css'],
 
   runtimeConfig: {
     public: {
@@ -25,5 +32,16 @@ export default defineNuxtConfig({
     }
   },
 
-  compatibilityDate: '2025-01-22'
+  typescript: {
+    strict: true
+  },
+
+  postcss: {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {}
+    }
+  },
+
+  compatibilityDate: '2025-01-30'
 })

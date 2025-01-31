@@ -2,7 +2,9 @@
 import type { DefineComponent, SlotsType } from 'vue'
 type IslandComponent<T extends DefineComponent> = T & DefineComponent<{}, {refresh: () => Promise<void>}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, SlotsType<{ fallback: { error: unknown } }>>
 interface _GlobalComponents {
-      'FileExplorer': typeof import("../components/FileExplorer.vue")['default']
+      'CommentBubble': typeof import("../components/CommentBubble.vue")['default']
+    'ContextMenu': typeof import("../components/ContextMenu.vue")['default']
+    'FileExplorer': typeof import("../components/FileExplorer.vue")['default']
     'FolderItem': typeof import("../components/FolderItem.vue")['default']
     'FolderTreeItem': typeof import("../components/FolderTreeItem.vue")['default']
     'NuxtWelcome': typeof import("../node_modules/nuxt/dist/app/components/welcome.vue")['default']
@@ -16,6 +18,8 @@ interface _GlobalComponents {
     'NuxtRouteAnnouncer': typeof import("../node_modules/nuxt/dist/app/components/nuxt-route-announcer")['default']
     'NuxtImg': typeof import("../node_modules/nuxt/dist/app/components/nuxt-stubs")['NuxtImg']
     'NuxtPicture': typeof import("../node_modules/nuxt/dist/app/components/nuxt-stubs")['NuxtPicture']
+    'ColorScheme': typeof import("../../node_modules/@nuxtjs/color-mode/dist/runtime/component.vue3.vue")['default']
+    'Button': typeof import("../components/ui/button/index")['Button']
     'NuxtPage': typeof import("../node_modules/nuxt/dist/pages/runtime/page")['default']
     'NoScript': typeof import("../node_modules/nuxt/dist/head/runtime/components")['NoScript']
     'Link': typeof import("../node_modules/nuxt/dist/head/runtime/components")['Link']
@@ -28,7 +32,9 @@ interface _GlobalComponents {
     'Body': typeof import("../node_modules/nuxt/dist/head/runtime/components")['Body']
     'NuxtIsland': typeof import("../node_modules/nuxt/dist/app/components/nuxt-island")['default']
     'NuxtRouteAnnouncer': IslandComponent<typeof import("../node_modules/nuxt/dist/app/components/server-placeholder")['default']>
-      'LazyFileExplorer': typeof import("../components/FileExplorer.vue")['default']
+      'LazyCommentBubble': typeof import("../components/CommentBubble.vue")['default']
+    'LazyContextMenu': typeof import("../components/ContextMenu.vue")['default']
+    'LazyFileExplorer': typeof import("../components/FileExplorer.vue")['default']
     'LazyFolderItem': typeof import("../components/FolderItem.vue")['default']
     'LazyFolderTreeItem': typeof import("../components/FolderTreeItem.vue")['default']
     'LazyNuxtWelcome': typeof import("../node_modules/nuxt/dist/app/components/welcome.vue")['default']
@@ -42,6 +48,8 @@ interface _GlobalComponents {
     'LazyNuxtRouteAnnouncer': typeof import("../node_modules/nuxt/dist/app/components/nuxt-route-announcer")['default']
     'LazyNuxtImg': typeof import("../node_modules/nuxt/dist/app/components/nuxt-stubs")['NuxtImg']
     'LazyNuxtPicture': typeof import("../node_modules/nuxt/dist/app/components/nuxt-stubs")['NuxtPicture']
+    'LazyColorScheme': typeof import("../../node_modules/@nuxtjs/color-mode/dist/runtime/component.vue3.vue")['default']
+    'LazyButton': typeof import("../components/ui/button/index")['Button']
     'LazyNuxtPage': typeof import("../node_modules/nuxt/dist/pages/runtime/page")['default']
     'LazyNoScript': typeof import("../node_modules/nuxt/dist/head/runtime/components")['NoScript']
     'LazyLink': typeof import("../node_modules/nuxt/dist/head/runtime/components")['Link']
@@ -60,6 +68,8 @@ declare module 'vue' {
   export interface GlobalComponents extends _GlobalComponents { }
 }
 
+export const CommentBubble: typeof import("../components/CommentBubble.vue")['default']
+export const ContextMenu: typeof import("../components/ContextMenu.vue")['default']
 export const FileExplorer: typeof import("../components/FileExplorer.vue")['default']
 export const FolderItem: typeof import("../components/FolderItem.vue")['default']
 export const FolderTreeItem: typeof import("../components/FolderTreeItem.vue")['default']
@@ -74,6 +84,8 @@ export const NuxtLoadingIndicator: typeof import("../node_modules/nuxt/dist/app/
 export const NuxtRouteAnnouncer: typeof import("../node_modules/nuxt/dist/app/components/nuxt-route-announcer")['default']
 export const NuxtImg: typeof import("../node_modules/nuxt/dist/app/components/nuxt-stubs")['NuxtImg']
 export const NuxtPicture: typeof import("../node_modules/nuxt/dist/app/components/nuxt-stubs")['NuxtPicture']
+export const ColorScheme: typeof import("../../node_modules/@nuxtjs/color-mode/dist/runtime/component.vue3.vue")['default']
+export const Button: typeof import("../components/ui/button/index")['Button']
 export const NuxtPage: typeof import("../node_modules/nuxt/dist/pages/runtime/page")['default']
 export const NoScript: typeof import("../node_modules/nuxt/dist/head/runtime/components")['NoScript']
 export const Link: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Link']
@@ -86,6 +98,8 @@ export const Html: typeof import("../node_modules/nuxt/dist/head/runtime/compone
 export const Body: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Body']
 export const NuxtIsland: typeof import("../node_modules/nuxt/dist/app/components/nuxt-island")['default']
 export const NuxtRouteAnnouncer: IslandComponent<typeof import("../node_modules/nuxt/dist/app/components/server-placeholder")['default']>
+export const LazyCommentBubble: typeof import("../components/CommentBubble.vue")['default']
+export const LazyContextMenu: typeof import("../components/ContextMenu.vue")['default']
 export const LazyFileExplorer: typeof import("../components/FileExplorer.vue")['default']
 export const LazyFolderItem: typeof import("../components/FolderItem.vue")['default']
 export const LazyFolderTreeItem: typeof import("../components/FolderTreeItem.vue")['default']
@@ -100,6 +114,8 @@ export const LazyNuxtLoadingIndicator: typeof import("../node_modules/nuxt/dist/
 export const LazyNuxtRouteAnnouncer: typeof import("../node_modules/nuxt/dist/app/components/nuxt-route-announcer")['default']
 export const LazyNuxtImg: typeof import("../node_modules/nuxt/dist/app/components/nuxt-stubs")['NuxtImg']
 export const LazyNuxtPicture: typeof import("../node_modules/nuxt/dist/app/components/nuxt-stubs")['NuxtPicture']
+export const LazyColorScheme: typeof import("../../node_modules/@nuxtjs/color-mode/dist/runtime/component.vue3.vue")['default']
+export const LazyButton: typeof import("../components/ui/button/index")['Button']
 export const LazyNuxtPage: typeof import("../node_modules/nuxt/dist/pages/runtime/page")['default']
 export const LazyNoScript: typeof import("../node_modules/nuxt/dist/head/runtime/components")['NoScript']
 export const LazyLink: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Link']

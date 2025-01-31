@@ -26,9 +26,6 @@
       "@unhead/vue": [
         "../node_modules/@unhead/vue"
       ],
-      "@nuxt/devtools": [
-        "../node_modules/@nuxt/devtools"
-      ],
       "@vue/runtime-core": [
         "../node_modules/@vue/runtime-core"
       ],
@@ -46,6 +43,9 @@
       ],
       "vite/client": [
         "../node_modules/vite/client"
+      ],
+      "@/lib/utils": [
+        "./shadcn-nuxt/utils"
       ],
       "~": [
         ".."
@@ -77,6 +77,9 @@
       "assets": [
         "../assets"
       ],
+      "assets/*": [
+        "../assets/*"
+      ],
       "public": [
         "../public"
       ],
@@ -88,6 +91,9 @@
       ],
       "vue-demi": [
         "../node_modules/nuxt/dist/app/compat/vue-demi"
+      ],
+      "#color-mode-options": [
+        "./color-mode-options.mjs"
       ],
       "#vue-router": [
         "../node_modules/vue-router"
@@ -140,6 +146,14 @@
     "./nuxt.d.ts",
     "../.config/nuxt.*",
     "../**/*",
+    "../node_modules/@pinia/nuxt/runtime",
+    "../node_modules/@pinia/nuxt/dist/runtime",
+    "../node_modules/@nuxtjs/tailwindcss/runtime",
+    "../node_modules/@nuxtjs/tailwindcss/dist/runtime",
+    "../../node_modules/@nuxtjs/color-mode/runtime",
+    "../../node_modules/@nuxtjs/color-mode/dist/runtime",
+    "../node_modules/shadcn-nuxt/runtime",
+    "../node_modules/shadcn-nuxt/dist/runtime",
     "../node_modules/@nuxt/devtools/runtime",
     "../node_modules/@nuxt/devtools/dist/runtime",
     "../node_modules/@nuxt/telemetry/runtime",
@@ -151,8 +165,20 @@
     "../node_modules",
     "../../node_modules",
     "../node_modules/nuxt/node_modules",
+    "../node_modules/@pinia/nuxt/node_modules",
+    "../../node_modules/@nuxtjs/tailwindcss/node_modules",
+    "../../node_modules/@nuxtjs/color-mode/node_modules",
+    "../node_modules/shadcn-nuxt/node_modules",
     "../node_modules/@nuxt/devtools/node_modules",
     "../node_modules/@nuxt/telemetry/node_modules",
+    "../node_modules/@pinia/nuxt/runtime/server",
+    "../node_modules/@pinia/nuxt/dist/runtime/server",
+    "../node_modules/@nuxtjs/tailwindcss/runtime/server",
+    "../node_modules/@nuxtjs/tailwindcss/dist/runtime/server",
+    "../../node_modules/@nuxtjs/color-mode/runtime/server",
+    "../../node_modules/@nuxtjs/color-mode/dist/runtime/server",
+    "../node_modules/shadcn-nuxt/runtime/server",
+    "../node_modules/shadcn-nuxt/dist/runtime/server",
     "../node_modules/@nuxt/devtools/runtime/server",
     "../node_modules/@nuxt/devtools/dist/runtime/server",
     "../node_modules/@nuxt/telemetry/runtime/server",

@@ -1,6 +1,7 @@
 import { Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
 import { dbOps } from "../db.ts";
 import { authMiddleware, login } from "../middleware/auth.ts";
+import { wsManager } from "../websocket.ts";
 
 const router = new Router();
 
@@ -9,10 +10,6 @@ router.post("/login", login);
 
 router.get("/folders", async (ctx) => {
   ctx.response.body = await dbOps.getFolders();
-});
-
-router.get("/files", async (ctx) => {
-  ctx.response.body = await dbOps.getFiles();
 });
 
 // Protected routes
@@ -61,47 +58,73 @@ router.delete("/folders/:id", async (ctx) => {
   }
 });
 
-// Edit file name
-router.put("/files/:id", async (ctx) => {
-  const id = parseInt(ctx.params.id);
-  const body = await ctx.request.body({ type: "json" }).value;
-  const { name } = body;
-
+// Get all files
+router.get("/api/files", async (ctx) => {
   try {
-    await dbOps.updateFileName(id, name);
+    ctx.response.body = await dbOps.getFiles();
+  } catch (error) {
+    console.error("Error getting files:", error);
+    ctx.response.status = 500;
+    ctx.response.body = { error: error.message };
+  }
+});
+
+// Create file
+router.post("/api/files", async (ctx) => {
+  try {
+    const body = await ctx.request.body({ type: "json" }).value;
+    const file = await dbOps.addFile(body.name, body.folder_id);
+    wsManager.notifyRefresh(); // Notify all clients
+    ctx.response.body = file;
+  } catch (error) {
+    console.error("Error creating file:", error);
+    ctx.response.status = 500;
+    ctx.response.body = { error: error.message };
+  }
+});
+
+// Update file
+router.put("/api/files/:id", async (ctx) => {
+  try {
+    const id = parseInt(ctx.params.id);
+    const body = await ctx.request.body({ type: "json" }).value;
+    await dbOps.updateFile(id, body);
+    wsManager.notifyRefresh(); // Notify all clients
     ctx.response.body = { success: true };
   } catch (error) {
+    console.error("Error updating file:", error);
     ctx.response.status = 500;
     ctx.response.body = { error: error.message };
   }
 });
 
 // Move file
-router.put("/files/:id/move", async (ctx) => {
-  const id = parseInt(ctx.params.id);
-  const body = await ctx.request.body({ type: "json" }).value;
-  const { folder_id } = body;
-
+router.put("/api/files/:id/move", async (ctx) => {
   try {
-    await dbOps.moveFile(id, folder_id);
+    const id = parseInt(ctx.params.id);
+    const body = await ctx.request.body({ type: "json" }).value;
+    await dbOps.moveFile(id, body.folder_id);
+    wsManager.notifyRefresh(); // Notify all clients
     ctx.response.body = { success: true };
   } catch (error) {
+    console.error("Error moving file:", error);
     ctx.response.status = 500;
     ctx.response.body = { error: error.message };
   }
 });
 
 // Delete file
-router.delete("/files/:id", async (ctx) => {
-  const id = parseInt(ctx.params.id);
-
+router.delete("/api/files/:id", async (ctx) => {
   try {
+    const id = parseInt(ctx.params.id);
     await dbOps.deleteFile(id);
+    wsManager.notifyRefresh(); // Notify all clients
     ctx.response.body = { success: true };
   } catch (error) {
+    console.error("Error deleting file:", error);
     ctx.response.status = 500;
     ctx.response.body = { error: error.message };
   }
 });
 
-export default router;
+export { router };

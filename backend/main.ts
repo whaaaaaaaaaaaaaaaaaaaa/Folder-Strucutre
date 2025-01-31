@@ -1,10 +1,9 @@
-import { Application } from "./deps.ts";
+import { Application, oakCors } from "./deps.ts";
+import { router as foldersRouter } from "./routes/folders.ts";
+import { router as filesRouter } from "./routes/files.ts";
+import { router as commentsRouter } from "./routes/comments.ts";
 import { dbOps, closeDb } from "./db.ts";
 import { load } from "./env.ts";
-
-// Import routes
-import foldersRouter from "./routes/folders.ts";
-import filesRouter from "./routes/files.ts";
 
 const app = new Application();
 
@@ -28,37 +27,6 @@ app.use(async (ctx, next) => {
       error: err.message || "Internal server error",
       path: ctx.request.url.pathname,
     });
-  }
-});
-
-// CORS middleware
-app.use(async (ctx, next) => {
-  // Set CORS headers
-  ctx.response.headers.set("Access-Control-Allow-Origin", "*");
-  ctx.response.headers.set(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS"
-  );
-  ctx.response.headers.set(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  );
-  ctx.response.headers.set(
-    "Access-Control-Max-Age",
-    "3600"
-  );
-
-  // Handle CORS preflight
-  if (ctx.request.method === "OPTIONS") {
-    ctx.response.status = 204; // No content
-    return;
-  }
-
-  try {
-    await next();
-  } catch (error) {
-    console.error("CORS middleware error:", error);
-    throw error;
   }
 });
 
@@ -94,6 +62,9 @@ app.use(async (ctx, next) => {
   }
 });
 
+// CORS middleware
+app.use(oakCors());
+
 // Load environment variables
 try {
   const env = await load();
@@ -121,6 +92,24 @@ app.use(foldersRouter.allowedMethods());
 
 app.use(filesRouter.routes());
 app.use(filesRouter.allowedMethods());
+
+app.use(commentsRouter.routes());
+app.use(commentsRouter.allowedMethods());
+
+// Static file serving
+app.use(async (ctx) => {
+  try {
+    await ctx.send({
+      root: `${Deno.cwd()}/../frontend/dist`,
+      index: "index.html",
+    });
+  } catch {
+    await ctx.send({
+      root: `${Deno.cwd()}/../frontend`,
+      index: "index.html",
+    });
+  }
+});
 
 // Handle shutdown gracefully
 async function shutdown() {
