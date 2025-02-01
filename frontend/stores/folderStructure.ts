@@ -56,19 +56,21 @@ interface State {
   draggedItem: FolderItem | null
 }
 
+const API_URL = 'http://localhost:8000';
+
 export const useFolderStructureStore = defineStore('folderStructure', {
-  state: (): State => ({
-    structures: [],
-    selectedStructure: null,
-    folders: {},
-    selectedItem: null,
-    expandedFolders: {},
-    comments: [],
+  state: () => ({
+    structures: [] as Structure[],
+    selectedStructure: null as Structure | null,
+    folders: {} as { [key: number]: Folder[] },
+    selectedItem: null as (Folder | File) | null,
+    expandedFolders: {} as { [key: number]: Set<number> },
+    comments: [] as Comment[],
     isLoggedIn: false,
     authToken: '',
-    currentUserId: null,
+    currentUserId: null as number | null,
     isDragging: false,
-    draggedItem: null
+    draggedItem: null as (Folder | File) | null,
   }),
 
   getters: {
@@ -106,43 +108,65 @@ export const useFolderStructureStore = defineStore('folderStructure', {
   actions: {
     async loadStructures() {
       try {
-        const response = await fetch('http://localhost:8000/structures')
-        if (!response.ok) throw new Error('Failed to load structures')
-        this.structures = await response.json()
+        const response = await fetch(`${API_URL}/api/structures`);
+        if (!response.ok) throw new Error('Failed to load structures');
+        const structures = await response.json();
+        this.structures = structures;
         
         // Load folders for each structure
-        await Promise.all(
-          this.structures.map((structure: Structure) => this.loadFolders(structure.id))
-        )
+        for (const structure of structures) {
+          await this.loadFolders(structure.id);
+        }
       } catch (error) {
-        console.error('Error loading structures:', error)
+        console.error('Error loading structures:', error);
+        throw error;
       }
     },
 
     async loadFolders(structureId: number) {
       try {
-        const response = await fetch(`http://localhost:8000/folders/${structureId}`)
-        if (!response.ok) throw new Error('Failed to load folders')
-        const folders = await response.json()
-        this.folders[structureId] = folders
+        const response = await fetch(`${API_URL}/api/folders?structureId=${structureId}`);
+        if (!response.ok) throw new Error('Failed to load folders');
+        const folders = await response.json();
         
-        // Initialize expanded folders set for this structure if not exists
-        if (!this.expandedFolders[structureId]) {
-          this.expandedFolders[structureId] = new Set()
-        }
+        // Create a map of parent IDs to child folders
+        const folderMap = new Map<number | null, Folder[]>();
+        folders.forEach((folder: Folder) => {
+          const parentId = folder.parent_id;
+          if (!folderMap.has(parentId)) {
+            folderMap.set(parentId, []);
+          }
+          folderMap.get(parentId)!.push(folder);
+        });
+
+        // Function to recursively build folder hierarchy
+        const buildHierarchy = (parentId: number | null): Folder[] => {
+          const children = folderMap.get(parentId) || [];
+          return children.map(folder => ({
+            ...folder,
+            children: buildHierarchy(folder.id)
+          }));
+        };
+
+        // Build the complete hierarchy starting from root folders
+        const rootFolders = buildHierarchy(null);
+        this.folders[structureId] = rootFolders;
+        this.expandedFolders[structureId] = new Set();
       } catch (error) {
-        console.error('Error loading folders:', error)
+        console.error('Error loading folders:', error);
+        throw error;
       }
     },
 
     async loadComments() {
       try {
-        // Load all comments at once
-        const response = await fetch('http://localhost:8000/api/comments')
-        if (!response.ok) throw new Error('Failed to load comments')
-        this.comments = await response.json()
+        const response = await fetch(`${API_URL}/api/comments`);
+        if (!response.ok) throw new Error('Failed to load comments');
+        const comments = await response.json();
+        this.comments = comments;
       } catch (error) {
-        console.error('Error loading comments:', error)
+        console.error('Error loading comments:', error);
+        throw error;
       }
     },
 
@@ -173,7 +197,7 @@ export const useFolderStructureStore = defineStore('folderStructure', {
 
       try {
         const endpoint = this.draggedItem.type === 'file' ? 'files' : 'folders'
-        const response = await fetch(`http://localhost:8000/${endpoint}/${this.draggedItem.id}/move`, {
+        const response = await fetch(`${API_URL}/${endpoint}/${this.draggedItem.id}/move`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -198,7 +222,7 @@ export const useFolderStructureStore = defineStore('folderStructure', {
 
     async login(password: string) {
       try {
-        const response = await fetch('http://localhost:8000/login', {
+        const response = await fetch(`${API_URL}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password })
@@ -241,7 +265,7 @@ export const useFolderStructureStore = defineStore('folderStructure', {
 
       try {
         const endpoint = item.type === 'file' ? '/files' : '/folders'
-        const response = await fetch(`http://localhost:8000${endpoint}`, {
+        const response = await fetch(`${API_URL}${endpoint}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

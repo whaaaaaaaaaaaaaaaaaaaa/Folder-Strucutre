@@ -1,43 +1,44 @@
-&lt;template>
-  &lt;div 
-    v-if="show"
+<template>
+  <div 
+    v-if="show && isAuthenticated"
     class="context-menu"
     :style="{ top: `${y}px`, left: `${x}px` }"
     @click.stop
   >
-    &lt;div v-if="type === 'folder'" class="menu-item" @click.stop="$emit('add-folder')">
-      &lt;span class="material-icons">create_new_folder&lt;/span>
+    <div v-if="type === 'folder'" class="menu-item" @click.stop="$emit('add-folder')">
+      <span class="material-icons">create_new_folder</span>
       Add Folder
-    &lt;/div>
-    &lt;div v-if="type === 'folder'" class="menu-item" @click.stop="$emit('add-file')">
-      &lt;span class="material-icons">note_add&lt;/span>
+    </div>
+    <div v-if="type === 'folder'" class="menu-item" @click.stop="$emit('add-file')">
+      <span class="material-icons">note_add</span>
       Add File
-    &lt;/div>
-    &lt;div class="menu-item" @click.stop="$emit('rename')">
-      &lt;span class="material-icons">edit&lt;/span>
+    </div>
+    <div class="menu-item" @click.stop="$emit('rename')">
+      <span class="material-icons">edit</span>
       Rename
-    &lt;/div>
-    &lt;div class="menu-item" @click.stop="$emit('move')">
-      &lt;span class="material-icons">drive_file_move&lt;/span>
+    </div>
+    <div class="menu-item" @click.stop="$emit('move')">
+      <span class="material-icons">drive_file_move</span>
       Move
-    &lt;/div>
-    &lt;div class="menu-item" @click.stop="$emit('delete')">
-      &lt;span class="material-icons">delete&lt;/span>
+    </div>
+    <div class="menu-item danger" @click.stop="$emit('delete')">
+      <span class="material-icons">delete</span>
       Delete
-    &lt;/div>
-    &lt;div class="menu-item" @click.stop="$emit('comment')">
-      &lt;span class="material-icons">comment&lt;/span>
+    </div>
+    <div class="menu-item" @click.stop="$emit('comment')">
+      <span class="material-icons">comment</span>
       Add Comment
-    &lt;/div>
-  &lt;/div>
-&lt;/template>
+    </div>
+  </div>
+</template>
 
-&lt;script setup lang="ts">
+<script setup lang="ts">
 defineProps<{
   show: boolean
   x: number
   y: number
   type: 'file' | 'folder'
+  isAuthenticated: boolean
 }>();
 
 defineEmits<{
@@ -48,18 +49,19 @@ defineEmits<{
   (e: 'delete'): void
   (e: 'comment'): void
 }>();
-&lt;/script>
+</script>
 
-&lt;style scoped>
+<style scoped>
 .context-menu {
   position: fixed;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   padding: 4px 0;
-  min-width: 150px;
+  min-width: 180px;
   z-index: 1000;
+  color: #fff;
 }
 
 .menu-item {
@@ -69,13 +71,23 @@ defineEmits<{
   gap: 8px;
   cursor: pointer;
   user-select: none;
+  transition: background-color 0.2s ease;
 }
 
 .menu-item:hover {
-  background: #f5f5f5;
+  background: #2a2a2a;
+}
+
+.menu-item.danger {
+  color: #ff4444;
+}
+
+.menu-item.danger:hover {
+  background: #2a1a1a;
 }
 
 .menu-item .material-icons {
   font-size: 18px;
+  opacity: 0.9;
 }
-&lt;/style>
+</style>

@@ -119,7 +119,8 @@ export const dbOps = {
           description TEXT,
           position INTEGER NOT NULL DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(name)
         )
       `).run();
 
@@ -140,7 +141,7 @@ export const dbOps = {
           token TEXT NOT NULL UNIQUE,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           expires_at DATETIME NOT NULL,
-          FOREIGN KEY (user_id) REFERENCES users(id)
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
       `).run();
 
@@ -153,8 +154,10 @@ export const dbOps = {
           parent_id INTEGER,
           structure_id INTEGER NOT NULL,
           level INTEGER NOT NULL DEFAULT 0,
-          FOREIGN KEY (parent_id) REFERENCES folders(id),
-          FOREIGN KEY (structure_id) REFERENCES structures(id),
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE CASCADE,
+          FOREIGN KEY (structure_id) REFERENCES structures(id) ON DELETE CASCADE,
           UNIQUE(path, structure_id)
         )
       `).run();
@@ -168,9 +171,11 @@ export const dbOps = {
           folder_id INTEGER NOT NULL,
           structure_id INTEGER NOT NULL,
           type TEXT NOT NULL,
-          color TEXT DEFAULT '#000000',
-          FOREIGN KEY (folder_id) REFERENCES folders(id),
-          FOREIGN KEY (structure_id) REFERENCES structures(id),
+          color TEXT NOT NULL DEFAULT '#2196F3',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
+          FOREIGN KEY (structure_id) REFERENCES structures(id) ON DELETE CASCADE,
           UNIQUE(path, structure_id)
         )
       `).run();
@@ -180,32 +185,11 @@ export const dbOps = {
         CREATE TABLE IF NOT EXISTS comments (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           content TEXT NOT NULL,
-          color TEXT DEFAULT '#FFD700',
+          color TEXT NOT NULL DEFAULT '#FFD700',
           target_type TEXT NOT NULL CHECK (target_type IN ('file', 'folder')),
           target_id INTEGER NOT NULL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (target_id)
-            REFERENCES files(id)
-            ON DELETE CASCADE
-            WHEN target_type = 'file',
-          FOREIGN KEY (target_id)
-            REFERENCES folders(id)
-            ON DELETE CASCADE
-            WHEN target_type = 'folder'
-        )
-      `).run();
-
-      console.log("Creating expanded_folders table if not exists");
-      database.prepare(`
-        CREATE TABLE IF NOT EXISTS expanded_folders (
-          user_id INTEGER NOT NULL,
-          folder_id INTEGER NOT NULL,
-          structure_id INTEGER NOT NULL,
-          PRIMARY KEY (user_id, folder_id, structure_id),
-          FOREIGN KEY (user_id) REFERENCES users(id),
-          FOREIGN KEY (folder_id) REFERENCES folders(id),
-          FOREIGN KEY (structure_id) REFERENCES structures(id)
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `).run();
 
@@ -255,54 +239,44 @@ export const dbOps = {
 
   getFolders: (structureId?: number): FolderRecord[] => {
     try {
-      console.log("Getting all folders");
-      const database = getDb();
-      const result = database.prepare(`
+      const db = getDb();
+      let query = `
         WITH RECURSIVE folder_tree AS (
-          -- Base case: root folders (no parent)
+          -- Base case: Get root folders
           SELECT 
-            f.id, f.path, f.name, f.parent_id,
-            f.path as full_path,
-            0 as level
+            f.id, f.name, f.path, f.parent_id, f.structure_id,
+            (SELECT COUNT(*) FROM folders sf WHERE sf.parent_id = f.id) as subfolder_count,
+            (SELECT COUNT(*) FROM files ff WHERE ff.folder_id = f.id) as file_count
           FROM folders f
           WHERE f.parent_id IS NULL
+          ${structureId ? 'AND f.structure_id = ?' : ''}
           
           UNION ALL
           
-          -- Recursive case: child folders
+          -- Recursive case: Get child folders
           SELECT 
-            f.id, f.path, f.name, f.parent_id,
-            ft.full_path || '/' || f.name as full_path,
-            ft.level + 1 as level
+            f.id, f.name, f.path, f.parent_id, f.structure_id,
+            (SELECT COUNT(*) FROM folders sf WHERE sf.parent_id = f.id) as subfolder_count,
+            (SELECT COUNT(*) FROM files ff WHERE ff.folder_id = f.id) as file_count
           FROM folders f
           JOIN folder_tree ft ON f.parent_id = ft.id
         )
-        SELECT 
-          ft.*,
-          (SELECT COUNT(*) FROM folders WHERE parent_id = ft.id) as subfolder_count,
-          json_group_array(
-            json_object(
-              'id', COALESCE(f.id, NULL),
-              'name', f.name,
-              'type', f.type
-            )
-          ) as files
-        FROM folder_tree ft
-        LEFT JOIN files f ON f.folder_id = ft.id
-        GROUP BY ft.id
-        ORDER BY ft.level, ft.full_path
-      `).all() as (FolderRecord & { files: string })[];
+        SELECT * FROM folder_tree
+        ORDER BY path;
+      `;
 
-      // Parse the JSON string of files into an array and filter out null entries
-      const folders = result.map(record => ({
-        ...record,
-        files: JSON.parse(record.files).filter((f: any) => f.id !== null)
-      }));
-      
-      console.log("Retrieved folders:", folders.length);
+      const params = structureId ? [structureId] : [];
+      const folders = db.prepare(query).all(...params) as FolderRecord[];
+
+      // Get files for each folder
+      for (const folder of folders) {
+        const files = dbOps.getFilesByFolderId(folder.id, folder.structure_id);
+        folder.files = files;
+      }
+
       return folders;
     } catch (error) {
-      console.error("Error getting folders:", error);
+      console.error('Error getting folders:', error);
       throw error;
     }
   },
@@ -520,31 +494,52 @@ export const dbOps = {
   },
 
   // Structure operations
-  createStructure: async (name: string, description: string | null, position: number): Promise<number> => {
-    const db = getDb();
+  createStructure: async (params: { name: string; description: string; position: number }): Promise<number> => {
     try {
+      const db = getDb();
+      
+      // Check if structure with this name already exists
+      const existingStructure = db.prepare(`
+        SELECT id FROM structures WHERE name = ?
+      `).get(params.name) as { id: number } | undefined;
+
+      if (existingStructure) {
+        return existingStructure.id;
+      }
+
+      // Insert new structure
       const result = db.prepare(`
         INSERT INTO structures (name, description, position)
         VALUES (?, ?, ?)
-      `).run(name, description, position) as unknown as DbResult;
-      
-      return result.lastInsertId || 0;
+      `).run(params.name, params.description, params.position);
+
+      // Get the ID of the newly inserted structure
+      const newStructure = db.prepare(`
+        SELECT id FROM structures WHERE name = ?
+      `).get(params.name) as { id: number } | undefined;
+
+      if (!newStructure) {
+        throw new Error('Failed to get ID of newly created structure');
+      }
+
+      return newStructure.id;
     } catch (error) {
-      console.error("Error creating structure:", error);
-      throw error;
+      console.error('Error creating structure:', error);
+      throw new Error(`Failed to create structure: ${error.message}`);
     }
   },
 
-  getStructures: (): StructureRecord[] => {
-    try {
-      const database = getDb();
-      return database.prepare(`
-        SELECT * FROM structures ORDER BY position
-      `).all() as StructureRecord[];
-    } catch (error) {
-      console.error("Error getting structures:", error);
-      throw error;
-    }
+  getStructures: () => {
+    const database = getDb();
+    const structures = database.prepare(
+      "SELECT * FROM structures ORDER BY position ASC"
+    ).all();
+    return structures.map((structure: StructureRecord) => ({
+      ...structure,
+      folders: database.prepare(
+        "SELECT * FROM folders WHERE structure_id = ? ORDER BY path ASC"
+      ).all(structure.id)
+    }));
   },
 
   updateStructurePosition: (id: number, position: number): DbResult => {
@@ -556,6 +551,104 @@ export const dbOps = {
       return result;
     } catch (error) {
       console.error("Error updating structure position:", error);
+      throw error;
+    }
+  },
+
+  updateStructureName: async (id: number, name: string): Promise<void> => {
+    try {
+      const database = getDb();
+      const result = database.prepare(`
+        UPDATE structures 
+        SET name = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+      `).run(name, id);
+
+      if (!result || !result.changes) {
+        throw new Error(`Structure with ID ${id} not found`);
+      }
+    } catch (error) {
+      console.error('Error updating structure name:', error);
+      throw error;
+    }
+  },
+
+  // Find a structure by name
+  findStructureByName: async (name: string): Promise<{ id: number; name: string } | undefined> => {
+    const db = getDb();
+    try {
+      const result = db.prepare(`
+        SELECT id, name FROM structures WHERE name = ?
+      `).get(name) as { id: number; name: string } | undefined;
+      
+      return result;
+    } catch (error) {
+      console.error('Error finding structure by name:', error);
+      throw error;
+    }
+  },
+
+  // Clear all folders and files in a structure
+  clearStructure: async (structureId: number): Promise<void> => {
+    const db = getDb();
+    try {
+      console.log('Clearing structure:', structureId);
+      
+      // Delete all files first (due to foreign key constraints)
+      db.prepare(`
+        DELETE FROM files WHERE structure_id = ?
+      `).run(structureId);
+
+      // Then delete all folders
+      db.prepare(`
+        DELETE FROM folders WHERE structure_id = ?
+      `).run(structureId);
+
+      console.log('Structure cleared successfully');
+    } catch (error) {
+      console.error('Error clearing structure:', error);
+      throw error;
+    }
+  },
+
+  // Delete a structure and all its folders/files
+  deleteStructure: async (structureId: number): Promise<void> => {
+    const db = getDb();
+    try {
+      console.log('Deleting structure:', structureId);
+      
+      // Delete all files first (due to foreign key constraints)
+      db.prepare(`
+        DELETE FROM files WHERE structure_id = ?
+      `).run(structureId);
+
+      // Then delete all folders
+      db.prepare(`
+        DELETE FROM folders WHERE structure_id = ?
+      `).run(structureId);
+
+      // Finally delete the structure
+      db.prepare(`
+        DELETE FROM structures WHERE id = ?
+      `).run(structureId);
+
+      console.log('Structure deleted successfully');
+    } catch (error) {
+      console.error('Error deleting structure:', error);
+      throw error;
+    }
+  },
+
+  // Get all structures
+  getAllStructures: async (): Promise<any[]> => {
+    const db = getDb();
+    try {
+      const structures = db.prepare(`
+        SELECT * FROM structures
+      `).all();
+      return structures;
+    } catch (error) {
+      console.error('Error getting structures:', error);
       throw error;
     }
   },
@@ -636,44 +729,119 @@ export const dbOps = {
   },
 
   // Create a new folder
-  createFolder: async (name: string, structureId: number, parentId: number | null): Promise<number> => {
-    const db = getDb();
+  createFolder: async (name: string, structureId: number, parentId: number | null = null, allowOverwrite: boolean = false): Promise<number> => {
     try {
-      const parentFolder = parentId ? await dbOps.getFolderById(parentId) : null;
-      const path = parentFolder ? `${parentFolder.path}/${name}` : name;
-      
+      const db = getDb();
+
+      // Calculate the path and level
+      let path = name;
+      let level = 0;
+
+      if (parentId) {
+        const parentFolder = db.prepare(`
+          SELECT path, level FROM folders WHERE id = ?
+        `).get(parentId) as { path: string; level: number } | undefined;
+
+        if (!parentFolder) {
+          throw new Error(`Parent folder with ID ${parentId} not found`);
+        }
+
+        path = `${parentFolder.path}/${name}`;
+        level = parentFolder.level + 1;
+      }
+
+      // Check if folder already exists at this path in this structure
+      const existingFolder = db.prepare(`
+        SELECT id FROM folders 
+        WHERE path = ? AND structure_id = ?
+      `).get(path, structureId) as { id: number } | undefined;
+
+      if (existingFolder) {
+        if (allowOverwrite) {
+          // Delete existing folder and all its contents
+          await dbOps.clearStructure(structureId);
+        } else {
+          return existingFolder.id;
+        }
+      }
+
+      // Insert the new folder
       const result = db.prepare(`
-        INSERT INTO folders (name, path, parent_id, structure_id)
-        VALUES (?, ?, ?, ?)
-      `).run(name, path, parentId, structureId) as unknown as DbResult;
-      
-      return result.lastInsertId || 0;
+        INSERT INTO folders (name, path, parent_id, structure_id, level)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(name, path, parentId, structureId, level);
+
+      // Get the ID of the newly inserted folder
+      const newFolder = db.prepare(`
+        SELECT id FROM folders 
+        WHERE path = ? AND structure_id = ?
+      `).get(path, structureId) as { id: number } | undefined;
+
+      if (!newFolder) {
+        throw new Error('Failed to get ID of newly created folder');
+      }
+
+      return newFolder.id;
     } catch (error) {
-      console.error("Error creating folder:", error);
-      throw error;
+      console.error('Error creating folder:', error);
+      throw new Error(`Failed to create folder: ${error.message}`);
     }
   },
 
   // Create a new file
-  createFile: async (name: string, folderId: number, structureId: number, color?: string): Promise<number> => {
+  createFile: async (name: string, folderId: number, structureId: number, allowOverwrite: boolean = false): Promise<number> => {
     const db = getDb();
     try {
-      const folder = await dbOps.getFolderById(folderId);
+      console.log('Creating file with params:', { name, folderId, structureId });
+
+      // First, verify that the folder exists
+      const folder = db.prepare(`
+        SELECT path FROM folders WHERE id = ? AND structure_id = ?
+      `).get(folderId, structureId) as { path: string } | undefined;
+
       if (!folder) {
-        throw new Error("Folder not found");
+        console.error(`Folder with ID ${folderId} not found in structure ${structureId}`);
+        throw new Error(`Folder with ID ${folderId} not found in structure ${structureId}`);
       }
 
-      const path = `${folder.path}/${name}`;
-      const type = name.split('.').pop() || '';
-      
+      // Create the file path
+      const path = `${folder.path}/${name}`.replace(/\/+/g, '/');
+      const type = name.split('.').pop() || 'file';
+
+      // Check if file already exists
+      const existingFile = db.prepare(`
+        SELECT id FROM files 
+        WHERE path = ? AND structure_id = ?
+      `).get(path, structureId) as { id: number } | undefined;
+
+      if (existingFile) {
+        if (allowOverwrite) {
+          console.log(`File ${path} already exists, returning existing ID:`, existingFile.id);
+          return existingFile.id;
+        } else {
+          throw new Error(`File with path ${path} already exists in structure ${structureId}`);
+        }
+      }
+
+      console.log('Creating file with path:', path);
+
+      // Insert the file
       const result = db.prepare(`
-        INSERT INTO files (name, path, folder_id, structure_id, type, color)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(name, path, folderId, structureId, type, color || '#000000') as unknown as DbResult;
-      
-      return result.lastInsertId || 0;
+        INSERT INTO files (name, path, folder_id, structure_id, type)
+        VALUES (?, ?, ?, ?, ?)
+        RETURNING id
+      `).all(name, path, folderId, structureId, type);
+
+      console.log('Insert result:', result);
+      if (!result || !Array.isArray(result) || result.length === 0 || !result[0].id) {
+        console.error('Failed to create file. Invalid result:', result);
+        throw new Error('Failed to create file');
+      }
+
+      console.log('Created file with ID:', result[0].id);
+      return result[0].id;
     } catch (error) {
-      console.error("Error creating file:", error);
+      console.error('Error creating file:', error);
       throw error;
     }
   },
@@ -681,5 +849,11 @@ export const dbOps = {
 
 // Ensure database is closed when the process exits
 globalThis.addEventListener("unload", () => {
-  dbOps.closeConnection();
+  try {
+    const db = getDb();
+    db.close();
+    console.log("Database connection closed");
+  } catch (error) {
+    console.error("Error closing database:", error);
+  }
 });

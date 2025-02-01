@@ -5,6 +5,16 @@ import { wsManager } from "../websocket.ts";
 const router = new Router();
 
 // Public routes
+router.get("/api/comments", async (ctx) => {
+  try {
+    ctx.response.body = await dbOps.getAllComments();
+  } catch (error) {
+    console.error("Error getting all comments:", error);
+    ctx.response.status = 500;
+    ctx.response.body = { error: error.message };
+  }
+});
+
 router.get("/api/comments/:itemId", async (ctx) => {
   try {
     const itemId = parseInt(ctx.params.itemId);

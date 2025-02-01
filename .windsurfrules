@@ -1,0 +1,92 @@
+**### Project Prompt: Folder Structure Visualization Web App**
+
+---
+
+****1. Overview:**
+Develop a web application that allows multiple users on a local network to visualize and compare up to four different folder structures side by side. The app should enable importing, editing, and interacting with these structures in real-time, facilitating easy demonstration of organizational differences.
+
+---
+
+**2. Technology Stack:**
+- **Backend:**
+  - **Runtime:** Deno 2.1.9
+  - **Framework:** Oak
+  - **Database:** SQLite
+- **Frontend:**
+  - **Framework:** Nuxt 3
+  - **UI Components:** ShadCN-Nuxt, Tailwind CSS
+  - **State Management:** Pinia
+  - **Icons:** Heroicons (for additional icons as needed)
+
+---
+
+**3. Features:**
+
+**a. Visualization:**
+- Display up to **four** folder structures in separate columns.
+- Implement **cascading folders** with expand/collapse functionality via left-click.
+- Draw **connecting lines** between parent folders/files and their children for clarity.
+- Allow **color-coding** of folder and file icons.
+- Enable **hovering comments** with popup bubbles pointing to respective items.
+
+**b. Interaction:**
+- **Drag & Drop:** Left-click and drag to move folders/files. Moving a folder also moves all its nested contents.
+- **Right-Click Menus:**
+  - **Folders:** Rename, Add Folder, Add File, Delete.
+  - **Files:** Rename, Delete.
+- **Import Structure:** Option to import folder structures from the local network, saving them to SQLite for future use.
+
+**c. User Roles:**
+- **View-Only Users:**
+  - Can navigate and expand/collapse folders on their screen.
+  - Their interactions do **not** affect other users.
+- **Editors:**
+  - Can log in (password: `Sophie123456@`) to edit, import, and modify folder structures.
+
+**d. Real-Time Collaboration:**
+- Support multiple users accessing and interacting simultaneously without performance issues.
+- Ensure that view-only interactions are isolated per user, while edits by authenticated users are reflected across all sessions.
+
+---
+
+**4. Additional Requirements:**
+- **Responsive Design:** Ensure the app is usable on various devices and screen sizes within the local network.
+- **Security:**
+  - Store passwords securely (hashed) in the database.
+  - Restrict edit functionalities to authenticated users only.
+  - Validate all user inputs to prevent security vulnerabilities.
+
+---
+
+**5. User Experience:**
+- **Intuitive UI:** Design a user-friendly interface for easy navigation and interaction with folder structures.
+- **Comments:** Allow users to add colored comments to folders/files, visible to all users, with popup bubbles for clarity.
+
+---
+
+**6. Authentication:**
+- Implement a simple authentication system with a default password:
+  - **Password:** `Sophie123456@`
+  - (Optional: Allow future enhancements for password changes and user management.)
+
+---
+
+**7. Deliverables:**
+- A fully functional web application meeting the above specifications.
+- Source code with clear documentation and instructions for setup.
+- SQLite database schema for storing folder structures and user data.
+
+---
+
+**8. Notes:**
+- Ensure that the default password is handled securely and consider prompting for a password change upon first login.
+- Optimize for performance to handle multiple simultaneous users on the local network.
+
+---
+
+**### End of Prompt**
+
+---
+
+**Usage Instructions:**
+Provide this prompt to your AI coder to initiate the development of the Folder Structure Visualization Web App. Ensure that any additional specific requirements or preferences are communicated as needed.

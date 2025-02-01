@@ -22,9 +22,14 @@ app.use(async (ctx, next) => {
 });
 
 // API routes
+import { authRouter } from "./routes/auth.ts";
 import "./routes/folders.ts";
 import "./routes/files.ts";
 import "./routes/comments.ts";
+
+// Mount routers
+app.use(authRouter.routes());
+app.use(authRouter.allowedMethods());
 
 // Static file serving
 app.use(async (ctx) => {

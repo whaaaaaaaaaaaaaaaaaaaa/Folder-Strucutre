@@ -5,7 +5,8 @@ export default defineNuxtConfig({
   modules: [
     '@pinia/nuxt',
     'shadcn-nuxt',
-    '@nuxtjs/tailwindcss'
+    '@nuxtjs/tailwindcss',
+    '@nuxtjs/color-mode'
   ],
 
   css: ['~/assets/css/main.css'],

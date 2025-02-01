@@ -8,6 +8,10 @@
             Login for Admin
           </button>
           <template v-else>
+            <button class="button" @click="importFolderStructure" style="margin-right: 10px;">
+              <span class="material-icons">folder_open</span>
+              Import Structure
+            </button>
             <button class="button" @click="logout">
               <span class="material-icons">logout</span>
               Logout
@@ -18,29 +22,40 @@
 
       <div class="structures-grid">
         <div v-for="structure in structures" :key="structure.id" class="structure-column">
-          <div class="structure-header">
-            <h3>{{ structure.name }}</h3>
-            <span v-if="structure.description" class="structure-description">
-              {{ structure.description }}
-            </span>
+          <div class="structure-title" @contextmenu.prevent="showStructureRenamePrompt(structure.id)">
+            {{ structure.name }}
+            <button 
+              v-if="isLoggedIn" 
+              class="delete-btn" 
+              @click.stop="deleteStructure(structure.id)"
+              title="Delete structure"
+            >
+              ×
+            </button>
           </div>
-          <div class="tree-view">
-            <div class="tree-container">
-              <FolderItem
-                v-for="folder in store.rootFolders(structure.id)"
+          <div class="folder-tree">
+            <template v-if="folders[structure.id]">
+              <FolderNode
+                v-for="folder in folders[structure.id]"
                 :key="folder.id"
                 :folder="folder"
-                :all-folders="folders[structure.id] || []"
-                :expanded-folders="expandedFolders[structure.id] || new Set()"
-                :comments="comments"
-                :is-admin="isLoggedIn"
-                @toggle="(id) => toggleFolder(structure.id, id)"
-                @context-menu="handleContextMenu"
-                @drop="handleDrop"
+                :structure-id="structure.id"
+                :level="0"
+                :is-authenticated="isLoggedIn"
+                @toggle="toggleFolder"
+                @select="selectItem"
                 @drag-start="startDragging"
                 @drag-end="stopDragging"
+                @drop="handleDrop"
+                @delete-folder="deleteFolder"
+                @add-folder="handleAddFolder"
+                @add-file="handleAddFile"
+                @rename="handleRename"
+                @move="handleMove"
+                @delete="handleDelete"
+                @comment="handleComment"
               />
-            </div>
+            </template>
           </div>
         </div>
       </div>
@@ -60,6 +75,24 @@
         <div class="modal-actions">
           <button @click="showLoginModal = false" class="button secondary">Cancel</button>
           <button @click="login" class="button">Login</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div v-if="showImportModal" class="modal">
+      <div class="modal-content">
+        <h2>Import Folder Structure</h2>
+        <input 
+          type="text" 
+          v-model="importPath" 
+          placeholder="Enter folder path (e.g., C:\Users\YourName\Documents)"
+          @keyup.enter="submitImport"
+          class="input"
+        />
+        <div class="modal-actions">
+          <button @click="showImportModal = false" class="button secondary">Cancel</button>
+          <button @click="submitImport" class="button">Import</button>
         </div>
       </div>
     </div>
@@ -157,7 +190,9 @@ import { ref, computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useFolderStructureStore } from '../stores/folderStructure'
 import type { File, Folder, Comment, FolderItem as FolderItemType } from '../stores/folderStructure'
-import FolderItem from './FolderItem.vue'
+import FolderNode from './FolderNode.vue'
+
+const API_URL = 'http://localhost:8000';
 
 const store = useFolderStructureStore()
 const {
@@ -191,6 +226,8 @@ const showCommentsModal = ref(false)
 const menuPosition = ref({ x: 0, y: 0 })
 const newComment = ref('')
 const newCommentColor = ref('#ffeb3b')
+const showImportModal = ref(false);
+const importPath = ref('');
 
 const selectedItemComments = computed(() => {
   if (!selectedItem.value?.id) return []
@@ -241,18 +278,22 @@ const login = async () => {
     }
 
     const data = await response.json()
-    authToken.value = data.token
     isLoggedIn.value = true
-    currentUserId.value = data.userId
-    localStorage.setItem('authToken', data.token)
-    localStorage.setItem('userId', data.userId.toString())
+    if (data.token) {
+      authToken.value = data.token
+      localStorage.setItem('authToken', data.token)
+    }
+    if (data.userId) {
+      currentUserId.value = data.userId
+      localStorage.setItem('userId', data.userId.toString())
+    }
     password.value = ''
     showLoginModal.value = false
 
     await loadStructures()
-  } catch (error: any) {
-    console.error('Login failed:', error)
-    alert(error.message || 'Login failed')
+  } catch (error) {
+    console.error('Login error:', error)
+    alert('Login failed: ' + error.message)
   }
 }
 
@@ -577,6 +618,259 @@ const getFileIcon = (type: string): string => {
   }
   return iconMap[type.toLowerCase()] || 'insert_drive_file'
 }
+
+async function deleteStructure(id: number) {
+  try {
+    const response = await fetch(`http://localhost:8000/api/structures/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${authToken.value}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete structure');
+    }
+
+    // Remove the structure from the local state
+    structures.value = structures.value.filter(s => s.id !== id);
+    
+    // Also remove any folders associated with this structure
+    folders.value = Object.fromEntries(
+      Object.entries(folders.value).filter(([structureId]) => parseInt(structureId) !== id)
+    );
+
+    // Reload all structures to ensure everything is in sync
+    await store.loadStructures();
+  } catch (error) {
+    console.error('Error deleting structure:', error);
+    alert('Failed to delete structure: ' + error.message);
+  }
+}
+
+function importFolderStructure() {
+  showImportModal.value = true;
+}
+
+async function submitImport() {
+  try {
+    if (!importPath.value) {
+      alert('Please enter a valid path');
+      return;
+    }
+
+    const response = await fetch('http://localhost:8000/api/folders/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken.value}`
+      },
+      body: JSON.stringify({
+        path: importPath.value
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to import folder structure');
+    }
+
+    await loadStructures();
+    showImportModal.value = false;
+    importPath.value = '';
+  } catch (error) {
+    console.error('Import error:', error);
+    alert(error.message);
+  }
+}
+
+const showStructureRenamePrompt = async (structureId: number) => {
+  if (!isLoggedIn.value) return;
+  
+  const structure = structures.value.find(s => s.id === structureId);
+  if (!structure) {
+    alert('Structure not found');
+    return;
+  }
+  
+  const newName = prompt('Enter new name:', structure.name);
+  if (newName && newName !== structure.name) {
+    try {
+      const response = await fetch(`${API_URL}/structures/${structureId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken.value}`
+        },
+        body: JSON.stringify({ name: newName.trim() })
+      });
+
+      if (response.ok) {
+        await loadStructures();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to rename structure');
+      }
+    } catch (error) {
+      console.error('Error renaming structure:', error);
+      alert('Failed to rename structure');
+    }
+  }
+};
+
+const deleteFolder = async (folderId: number) => {
+  if (!isLoggedIn.value) return;
+  try {
+    await fetch(`/api/folders/${folderId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    // Refresh the folder structure
+    await loadStructures();
+  } catch (error) {
+    console.error('Error deleting folder:', error);
+  }
+};
+
+const handleAddFolder = async (parentId: number) => {
+  if (!isLoggedIn.value) return;
+  const name = prompt('Enter folder name:');
+  if (!name) return;
+
+  try {
+    const response = await fetch('http://localhost:8000/folders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name, parentId })
+    });
+
+    if (!response.ok) throw new Error('Failed to create folder');
+    await loadStructures();
+  } catch (error) {
+    console.error('Error creating folder:', error);
+    alert('Failed to create folder');
+  }
+};
+
+const handleAddFile = async (parentId: number) => {
+  if (!isLoggedIn.value) return;
+  const name = prompt('Enter file name:');
+  if (!name) return;
+
+  try {
+    const response = await fetch('http://localhost:8000/files', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name, parentId })
+    });
+
+    if (!response.ok) throw new Error('Failed to create file');
+    await loadStructures();
+  } catch (error) {
+    console.error('Error creating file:', error);
+    alert('Failed to create file');
+  }
+};
+
+const handleRename = async ({ id, type }: { id: number, type: 'file' | 'folder' }) => {
+  if (!isLoggedIn.value) return;
+  const name = prompt('Enter new name:');
+  if (!name) return;
+
+  try {
+    const endpoint = type === 'file' ? 'files' : 'folders';
+    const response = await fetch(`http://localhost:8000/${endpoint}/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name })
+    });
+
+    if (!response.ok) throw new Error(`Failed to rename ${type}`);
+    await loadStructures();
+  } catch (error) {
+    console.error(`Error renaming ${type}:`, error);
+    alert(`Failed to rename ${type}`);
+  }
+};
+
+const handleMove = async ({ id, type }: { id: number, type: 'file' | 'folder' }) => {
+  if (!isLoggedIn.value) return;
+  const targetFolderId = prompt('Enter target folder ID:');
+  if (!targetFolderId) return;
+
+  try {
+    const endpoint = type === 'file' ? 'files' : 'folders';
+    const response = await fetch(`http://localhost:8000/${endpoint}/${id}/move`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ targetFolderId: parseInt(targetFolderId) })
+    });
+
+    if (!response.ok) throw new Error(`Failed to move ${type}`);
+    await loadStructures();
+  } catch (error) {
+    console.error(`Error moving ${type}:`, error);
+    alert(`Failed to move ${type}`);
+  }
+};
+
+const handleDelete = async ({ id, type }: { id: number, type: 'file' | 'folder' }) => {
+  if (!isLoggedIn.value) return;
+  if (!confirm(`Are you sure you want to delete this ${type}?`)) return;
+
+  try {
+    const endpoint = type === 'file' ? 'files' : 'folders';
+    const response = await fetch(`http://localhost:8000/${endpoint}/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) throw new Error(`Failed to delete ${type}`);
+    await loadStructures();
+  } catch (error) {
+    console.error(`Error deleting ${type}:`, error);
+    alert(`Failed to delete ${type}`);
+  }
+};
+
+const handleComment = async ({ id, type }: { id: number, type: 'file' | 'folder' }) => {
+  if (!isLoggedIn.value) return;
+  const content = prompt('Enter comment:');
+  if (!content) return;
+
+  try {
+    const response = await fetch('http://localhost:8000/comments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        content,
+        itemId: id,
+        itemType: type,
+        color: '#ffeb3b' // Default yellow color
+      })
+    });
+
+    if (!response.ok) throw new Error('Failed to add comment');
+    await loadComments();
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    alert('Failed to add comment');
+  }
+};
 </script>
 
 <style scoped>
@@ -584,38 +878,86 @@ const getFileIcon = (type: string): string => {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: var(--background-color);
 }
 
 .explorer-content {
   flex: 1;
-  overflow-y: auto;
-  padding: 16px;
+  padding: 20px;
+  overflow: auto;
 }
 
 .toolbar {
-  display: flex;
-  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
   margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.tree-view {
-  background-color: #1a1a1a;
+.toolbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.button {
+  padding: 6px 12px;
+  background-color: #2a2a2a;
+  color: #fff;
+  border: 1px solid #444;
   border-radius: 4px;
-  padding: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.button:hover {
+  background-color: #3a3a3a;
+  border-color: #555;
+}
+
+.material-icons {
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+.structures-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+
+.structure-column {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 15px;
   min-height: 200px;
 }
 
-.tree-container {
+.structure-title {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
   position: relative;
-  padding-left: 12px;
+  padding-right: 30px;  /* Make room for delete button */
 }
 
-.tree-container > .tree-item {
-  margin-bottom: 8px;
+.structure-title:hover {
+  text-decoration: underline;
 }
 
-.tree-container > .tree-item:last-child {
-  margin-bottom: 0;
+.folder-tree {
+  overflow: auto;
+  max-height: calc(100vh - 250px);
 }
 
 .context-menu {
@@ -758,5 +1100,42 @@ const getFileIcon = (type: string): string => {
 
 .icon-button:hover {
   color: white;
+}
+
+.delete-button {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #888;
+  font-size: 1.2rem;
+  margin-left: 8px;
+}
+
+.delete-button:hover {
+  color: white;
+}
+
+.delete-btn {
+  opacity: 0;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #ff4444;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: opacity 0.2s ease;
+}
+
+.delete-btn:hover {
+  color: #ff6666;
+}
+
+.structure-title:hover .delete-btn {
+  opacity: 1;
 }
 </style>

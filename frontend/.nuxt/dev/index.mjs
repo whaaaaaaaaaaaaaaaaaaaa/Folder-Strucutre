@@ -3,30 +3,30 @@ import { Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parentPort, threadId } from 'node:worker_threads';
-import { getRequestHeader, splitCookiesString, setResponseStatus, setResponseHeader, send, getRequestHeaders, defineEventHandler, handleCacheHeaders, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, setResponseHeaders, createError, getRouterParam, getQuery as getQuery$1, readBody, getResponseStatusText } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/h3/dist/index.mjs';
-import { getRequestDependencies, getPreloadLinks, getPrefetchLinks, createRenderer } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/vue-bundle-renderer/dist/runtime.mjs';
-import { stringify, uneval } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/devalue/index.js';
-import destr from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/destr/dist/index.mjs';
-import { withQuery, joinURL, withTrailingSlash, parseURL, withoutBase, getQuery, joinRelativeURL } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/ufo/dist/index.mjs';
-import { renderToString } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/vue/server-renderer/index.mjs';
-import { propsToString, renderSSRHead } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/@unhead/ssr/dist/index.mjs';
-import { createServerHead as createServerHead$1, CapoPlugin } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/unhead/dist/index.mjs';
-import { klona } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/klona/dist/index.mjs';
-import defu, { defuFn } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/defu/dist/defu.mjs';
-import { snakeCase } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/scule/dist/index.mjs';
-import { createHooks } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/hookable/dist/index.mjs';
-import { createFetch as createFetch$1, Headers as Headers$1 } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/ofetch/dist/node.mjs';
-import { createCall, createFetch } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/unenv/runtime/fetch/index.mjs';
+import { getRequestHeader, splitCookiesString, setResponseStatus, setResponseHeader, send, getRequestHeaders, defineEventHandler, handleCacheHeaders, createEvent, fetchWithEvent, isEvent, eventHandler, setHeaders, sendRedirect, proxyRequest, createApp, createRouter as createRouter$1, toNodeListener, lazyEventHandler, getResponseStatus, setResponseHeaders, createError, getRouterParam, getQuery as getQuery$1, readBody, getResponseStatusText } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/h3/dist/index.mjs';
+import { getRequestDependencies, getPreloadLinks, getPrefetchLinks, createRenderer } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/vue-bundle-renderer/dist/runtime.mjs';
+import { stringify, uneval } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/devalue/index.js';
+import destr from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/destr/dist/index.mjs';
+import { withQuery, joinURL, withTrailingSlash, parseURL, withoutBase, getQuery, joinRelativeURL } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/ufo/dist/index.mjs';
+import { renderToString } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/vue/server-renderer/index.mjs';
+import { propsToString, renderSSRHead } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/@unhead/ssr/dist/index.mjs';
+import { createServerHead as createServerHead$1, CapoPlugin } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/unhead/dist/index.mjs';
+import { klona } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/klona/dist/index.mjs';
+import defu, { defuFn } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/defu/dist/defu.mjs';
+import { snakeCase } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/scule/dist/index.mjs';
+import { createHooks } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/hookable/dist/index.mjs';
+import { createFetch as createFetch$1, Headers as Headers$1 } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/ofetch/dist/node.mjs';
+import { createCall, createFetch } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/unenv/runtime/fetch/index.mjs';
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { consola } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/consola/dist/index.mjs';
-import { getContext } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/unctx/dist/index.mjs';
-import { captureRawStackTrace, parseRawStackTrace } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/errx/dist/index.js';
-import { isVNode, version, unref } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/vue/index.mjs';
-import { hash } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/ohash/dist/index.mjs';
-import { createStorage, prefixStorage } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/unstorage/dist/index.mjs';
-import unstorage_47drivers_47fs from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/unstorage/drivers/fs.mjs';
-import { toRouteMatcher, createRouter } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/radix3/dist/index.mjs';
-import { defineHeadPlugin } from 'file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/node_modules/@unhead/shared/dist/index.mjs';
+import { consola } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/consola/dist/index.mjs';
+import { getContext } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/unctx/dist/index.mjs';
+import { captureRawStackTrace, parseRawStackTrace } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/errx/dist/index.js';
+import { isVNode, version, unref } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/vue/index.mjs';
+import { hash } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/ohash/dist/index.mjs';
+import { createStorage, prefixStorage } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/unstorage/dist/index.mjs';
+import unstorage_47drivers_47fs from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/unstorage/drivers/fs.mjs';
+import { toRouteMatcher, createRouter } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/radix3/dist/index.mjs';
+import { defineHeadPlugin } from 'file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/node_modules/@unhead/shared/dist/index.mjs';
 
 function hasReqHeader(event, name, includes) {
   const value = getRequestHeader(event, name);
@@ -172,13 +172,13 @@ if (!window.__NUXT_DEVTOOLS_TIME_METRIC__) {
 window.__NUXT_DEVTOOLS_TIME_METRIC__.appInit = Date.now()
 `;
 
-const _hVVUu99qWY = (function(nitro) {
+const _KTtgVhkVio = (function(nitro) {
   nitro.hooks.hook("render:html", (htmlContext) => {
     htmlContext.head.push(`<script>${script$1}<\/script>`);
   });
 });
 
-const rootDir = "C:/Users/a.hay/Documents/Code Projects/Folder Strucutre/frontend";
+const rootDir = "C:/Users/a.hay.MA/Documents/Code Projects/Folder-Strucutre/Folder-Strucutre/frontend";
 
 const appHead = {"meta":[{"charset":"utf-8"},{"name":"viewport","content":"width=device-width, initial-scale=1"}],"link":[{"rel":"stylesheet","href":"https://fonts.googleapis.com/icon?family=Material+Icons"}],"style":[],"script":[],"noscript":[],"title":"Folder Structure App"};
 
@@ -197,7 +197,7 @@ const devReducers = {
   URL: (data) => data instanceof URL ? data.toString() : undefined
 };
 const asyncContext = getContext("nuxt-dev", { asyncContext: true, AsyncLocalStorage });
-const _pZLApGa8Ce = (nitroApp) => {
+const _h9BdBsg9JF = (nitroApp) => {
   const handler = nitroApp.h3App.handler;
   nitroApp.h3App.handler = (event) => {
     return asyncContext.callAsync({ logs: [], event }, () => handler(event));
@@ -268,26 +268,26 @@ function onConsoleLog(callback) {
 
 const script = "\"use strict\";(()=>{const t=window,e=document.documentElement,c=[\"dark\",\"light\"],n=getStorageValue(\"localStorage\",\"nuxt-color-mode\")||\"system\";let i=n===\"system\"?u():n;const r=e.getAttribute(\"data-color-mode-forced\");r&&(i=r),l(i),t[\"__NUXT_COLOR_MODE__\"]={preference:n,value:i,getColorScheme:u,addColorScheme:l,removeColorScheme:d};function l(o){const s=\"\"+o+\"-mode\",a=\"\";e.classList?e.classList.add(s):e.className+=\" \"+s,a&&e.setAttribute(\"data-\"+a,o)}function d(o){const s=\"\"+o+\"-mode\",a=\"\";e.classList?e.classList.remove(s):e.className=e.className.replace(new RegExp(s,\"g\"),\"\"),a&&e.removeAttribute(\"data-\"+a)}function f(o){return t.matchMedia(\"(prefers-color-scheme\"+o+\")\")}function u(){if(t.matchMedia&&f(\"\").media!==\"not all\"){for(const o of c)if(f(\":\"+o).matches)return o}return\"light\"}})();function getStorageValue(t,e){switch(t){case\"localStorage\":return window.localStorage.getItem(e);case\"sessionStorage\":return window.sessionStorage.getItem(e);case\"cookie\":return getCookie(e);default:return null}}function getCookie(t){const c=(\"; \"+window.document.cookie).split(\"; \"+t+\"=\");if(c.length===2)return c.pop()?.split(\";\").shift()}";
 
-const _rydQTfcx7K = (function(nitro) {
+const _HPkz54XE2M = (function(nitro) {
   nitro.hooks.hook("render:html", (htmlContext) => {
     htmlContext.head.push(`<script>${script}<\/script>`);
   });
 });
 
 const plugins = [
-  _hVVUu99qWY,
-_pZLApGa8Ce,
-_rydQTfcx7K
+  _KTtgVhkVio,
+_h9BdBsg9JF,
+_HPkz54XE2M
 ];
 
-const _lazy_oQQBAo = () => Promise.resolve().then(function () { return renderer$1; });
+const _lazy_qVGsx9 = () => Promise.resolve().then(function () { return renderer$1; });
 
 const handlers = [
-  { route: '/__nuxt_error', handler: _lazy_oQQBAo, lazy: true, middleware: false, method: undefined },
-  { route: '/**', handler: _lazy_oQQBAo, lazy: true, middleware: false, method: undefined }
+  { route: '/__nuxt_error', handler: _lazy_qVGsx9, lazy: true, middleware: false, method: undefined },
+  { route: '/**', handler: _lazy_qVGsx9, lazy: true, middleware: false, method: undefined }
 ];
 
-const serverAssets = [{"baseName":"server","dir":"C:/Users/a.hay/Documents/Code Projects/Folder Strucutre/frontend/server/assets"}];
+const serverAssets = [{"baseName":"server","dir":"C:/Users/a.hay.MA/Documents/Code Projects/Folder-Strucutre/Folder-Strucutre/frontend/server/assets"}];
 
 const assets = createStorage();
 
@@ -299,11 +299,11 @@ const storage = createStorage({});
 
 storage.mount('/assets', assets);
 
-storage.mount('root', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:\\Users\\a.hay\\Documents\\Code Projects\\Folder Strucutre\\frontend","ignore":["**/node_modules/**","**/.git/**"]}));
-storage.mount('src', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:\\Users\\a.hay\\Documents\\Code Projects\\Folder Strucutre\\frontend\\server","ignore":["**/node_modules/**","**/.git/**"]}));
-storage.mount('build', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:\\Users\\a.hay\\Documents\\Code Projects\\Folder Strucutre\\frontend\\.nuxt","ignore":["**/node_modules/**","**/.git/**"]}));
-storage.mount('cache', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:\\Users\\a.hay\\Documents\\Code Projects\\Folder Strucutre\\frontend\\.nuxt\\cache","ignore":["**/node_modules/**","**/.git/**"]}));
-storage.mount('data', unstorage_47drivers_47fs({"driver":"fs","base":"C:\\Users\\a.hay\\Documents\\Code Projects\\Folder Strucutre\\frontend\\.data\\kv","ignore":["**/node_modules/**","**/.git/**"]}));
+storage.mount('root', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:\\Users\\a.hay.MA\\Documents\\Code Projects\\Folder-Strucutre\\Folder-Strucutre\\frontend","ignore":["**/node_modules/**","**/.git/**"]}));
+storage.mount('src', unstorage_47drivers_47fs({"driver":"fs","readOnly":true,"base":"C:\\Users\\a.hay.MA\\Documents\\Code Projects\\Folder-Strucutre\\Folder-Strucutre\\frontend\\server","ignore":["**/node_modules/**","**/.git/**"]}));
+storage.mount('build', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:\\Users\\a.hay.MA\\Documents\\Code Projects\\Folder-Strucutre\\Folder-Strucutre\\frontend\\.nuxt","ignore":["**/node_modules/**","**/.git/**"]}));
+storage.mount('cache', unstorage_47drivers_47fs({"driver":"fs","readOnly":false,"base":"C:\\Users\\a.hay.MA\\Documents\\Code Projects\\Folder-Strucutre\\Folder-Strucutre\\frontend\\.nuxt\\cache","ignore":["**/node_modules/**","**/.git/**"]}));
+storage.mount('data', unstorage_47drivers_47fs({"driver":"fs","base":"C:\\Users\\a.hay.MA\\Documents\\Code Projects\\Folder-Strucutre\\Folder-Strucutre\\frontend\\.data\\kv","ignore":["**/node_modules/**","**/.git/**"]}));
 
 function useStorage(base = "") {
   return base ? prefixStorage(storage, base) : storage;
@@ -1172,8 +1172,8 @@ function publicAssetsURL(...path) {
 
 globalThis.__buildAssetsURL = buildAssetsURL;
 globalThis.__publicAssetsURL = publicAssetsURL;
-const getClientManifest = () => import('file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/.nuxt/dist/server/client.manifest.mjs').then((r) => r.default || r).then((r) => typeof r === "function" ? r() : r);
-const getServerEntry = () => import('file://C:/Users/a.hay/Documents/Code%20Projects/Folder%20Strucutre/frontend/.nuxt/dist/server/server.mjs').then((r) => r.default || r);
+const getClientManifest = () => import('file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/.nuxt/dist/server/client.manifest.mjs').then((r) => r.default || r).then((r) => typeof r === "function" ? r() : r);
+const getServerEntry = () => import('file://C:/Users/a.hay.MA/Documents/Code%20Projects/Folder-Strucutre/Folder-Strucutre/frontend/.nuxt/dist/server/server.mjs').then((r) => r.default || r);
 const getSSRStyles = lazyCachedFunction(() => Promise.resolve().then(function () { return styles$1; }).then((r) => r.default || r));
 const getSSRRenderer = lazyCachedFunction(async () => {
   const manifest = await getClientManifest();

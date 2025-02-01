@@ -1,9 +1,13 @@
-import { Application, oakCors } from "./deps.ts";
+import { Application, Router } from "https://deno.land/x/oak@v12.6.1/mod.ts";
+import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
+import { ensureDir } from "https://deno.land/std@0.177.0/fs/mod.ts";
+import { dirname, join } from "https://deno.land/std@0.177.0/path/mod.ts";
 import { router as foldersRouter } from "./routes/folders.ts";
 import { router as filesRouter } from "./routes/files.ts";
 import { router as commentsRouter } from "./routes/comments.ts";
 import { dbOps, closeDb } from "./db.ts";
 import { load } from "./env.ts";
+import { verify } from "https://deno.land/x/djwt@v2.8/mod.ts"; // Import verify from djwt with full URL
 
 const app = new Application();
 
@@ -22,11 +26,11 @@ app.use(async (ctx, next) => {
     
     ctx.response.headers.set("Content-Type", "application/json");
     ctx.response.status = err.status || 500;
-    ctx.response.body = JSON.stringify({
+    ctx.response.body = {
       success: false,
       error: err.message || "Internal server error",
       path: ctx.request.url.pathname,
-    });
+    };
   }
 });
 
@@ -63,12 +67,26 @@ app.use(async (ctx, next) => {
 });
 
 // CORS middleware
-app.use(oakCors());
+app.use(async (ctx, next) => {
+  ctx.response.headers.set("Access-Control-Allow-Origin", "http://localhost:3000");
+  ctx.response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  ctx.response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (ctx.request.method === "OPTIONS") {
+    ctx.response.status = 200;
+    return;
+  }
+
+  await next();
+});
 
 // Load environment variables
 try {
   const env = await load();
-  console.log("Environment variables loaded successfully");
+  console.log("Loaded environment variables:", {
+    ADMIN_PASSWORD: env.ADMIN_PASSWORD ? "[HIDDEN]" : "undefined",
+    JWT_SECRET: env.JWT_SECRET ? "[HIDDEN]" : "undefined"
+  });
   
   // Make env available to the application
   app.state.env = env;
@@ -86,7 +104,124 @@ try {
   Deno.exit(1);
 }
 
-// Routes
+// Create a new router for API endpoints
+const apiRouter = new Router();
+
+const router = new Router()
+  .get("/api/structures", async (ctx) => {
+    try {
+      const structures = await dbOps.getStructures();
+      ctx.response.body = structures;
+    } catch (error) {
+      ctx.response.status = 500;
+      ctx.response.body = { error: "Failed to load structures" };
+    }
+  })
+  .patch("/structures/:id", async (ctx) => {
+    try {
+      const id = parseInt(ctx.params.id);
+      if (isNaN(id)) {
+        ctx.response.status = 400;
+        ctx.response.body = { error: "Invalid structure ID" };
+        return;
+      }
+
+      const body = await ctx.request.body();
+      if (body.type !== "json") {
+        ctx.response.status = 400;
+        ctx.response.body = { error: "Content-Type must be application/json" };
+        return;
+      }
+
+      const { name } = await body.value;
+      if (!name || typeof name !== "string") {
+        ctx.response.status = 400;
+        ctx.response.body = { error: "Name is required and must be a string" };
+        return;
+      }
+
+      await dbOps.updateStructureName(id, name);
+      ctx.response.status = 200;
+      ctx.response.body = { success: true };
+    } catch (error) {
+      console.error("Error updating structure:", error);
+      ctx.response.status = 500;
+      ctx.response.body = { error: "Failed to update structure" };
+    }
+  })
+  // Import endpoint
+  .post('/import', async (ctx) => {
+    const { path } = await ctx.request.body().value;
+
+    // Validate path
+    if (!path || typeof path !== 'string') {
+      ctx.response.status = 400;
+      ctx.response.body = { error: 'Invalid path' };
+      return;
+    }
+
+    try {
+      // Check if path exists
+      const stat = await Deno.stat(path);
+      if (!stat.isDirectory) {
+        ctx.response.status = 400;
+        ctx.response.body = { error: 'Path is not a directory' };
+        return;
+      }
+
+      // Create structure
+      const structureId = await dbOps.createStructure(
+        path.split(/[\\/]/).pop() || 'Imported Structure',
+        `Imported from ${path}`,
+        0
+      );
+
+      // Recursively import folders and files
+      const importFolder = async (dirPath: string, parentId: number | null = null, level = 0) => {
+        // Import current folder
+        const folderId = await dbOps.createFolder(
+          dirPath.split(/[\\/]/).pop() || 'Root',
+          structureId,
+          parentId
+        );
+
+        // Import files
+        for await (const entry of Deno.readDir(dirPath)) {
+          if (entry.isFile) {
+            await dbOps.createFile(
+              entry.name,
+              folderId,
+              structureId,
+              '#000000'
+            );
+          } else if (entry.isDirectory) {
+            await importFolder(
+              join(dirPath, entry.name),
+              folderId,
+              level + 1
+            );
+          }
+        }
+      };
+
+      await importFolder(path);
+
+      ctx.response.status = 200;
+      ctx.response.body = { success: true, structureId };
+    } catch (error) {
+      console.error('Import error:', error);
+      ctx.response.status = 500;
+      ctx.response.body = { error: 'Failed to import folder structure' };
+    }
+  });
+
+apiRouter.use(router.routes());
+apiRouter.use(router.allowedMethods());
+
+// Use the routers
+app.use(apiRouter.routes());
+app.use(apiRouter.allowedMethods());
+
 app.use(foldersRouter.routes());
 app.use(foldersRouter.allowedMethods());
 
