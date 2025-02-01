@@ -42,13 +42,22 @@ router.put("/api/folders/:id", async (ctx) => {
   try {
     const id = parseInt(ctx.params.id);
     const body = await ctx.request.body({ type: "json" }).value;
-    await dbOps.updateFolder(id, body);
+    
+    // Only update the folder name in the database
+    const result = await dbOps.updateFolder(id, body.name);
+    
+    if (result.changes === 0) {
+      ctx.response.status = 404;
+      ctx.response.body = { error: "Folder not found" };
+      return;
+    }
+    
     wsManager.notifyRefresh(); // Notify all clients
     ctx.response.body = { success: true };
   } catch (error) {
     console.error("Error updating folder:", error);
     ctx.response.status = 500;
-    ctx.response.body = { error: error.message };
+    ctx.response.body = { error: "Failed to rename folder" };
   }
 });
 

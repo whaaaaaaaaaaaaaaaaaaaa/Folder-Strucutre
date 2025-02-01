@@ -300,23 +300,13 @@ export const dbOps = {
   },
 
   updateFolder: (id: number, name: string): DbResult => {
-    try {
-      const database = getDb();
-      const folder = database.prepare("SELECT * FROM folders WHERE id = ?").get([id]) as FolderRecord;
-      if (!folder) throw new Error("Folder not found");
-
-      const parentPath = folder.path.substring(0, folder.path.lastIndexOf('/') + 1);
-      const newPath = parentPath + name;
-      
-      const result = database.prepare(
-        "UPDATE folders SET path = ?, name = ? WHERE id = ?"
-      ).run([newPath, name, id]);
-
-      return result as unknown as DbResult;
-    } catch (error) {
-      console.error("Error updating folder:", error);
-      throw error;
-    }
+    const db = getDb();
+    const result = db.prepare(`
+      UPDATE folders 
+      SET name = ? 
+      WHERE id = ?
+    `).run(name, id);
+    return result;
   },
 
   addFile: async (file: {
@@ -564,8 +554,15 @@ export const dbOps = {
         WHERE id = ?
       `).run(name, id);
 
-      if (!result || !result.changes) {
-        throw new Error(`Structure with ID ${id} not found`);
+      if (!result || result.changes === 0) {
+        // Check if the structure exists
+        const existing = database.prepare(`
+          SELECT id FROM structures WHERE id = ?
+        `).get(id);
+        if (!existing) {
+          throw new Error(`Structure with ID ${id} not found`);
+        }
+        // Otherwise, the update didn't change any data (possibly the same value was provided)
       }
     } catch (error) {
       console.error('Error updating structure name:', error);

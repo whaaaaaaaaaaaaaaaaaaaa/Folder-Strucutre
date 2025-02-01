@@ -16,13 +16,28 @@ router.get("/folders", async (ctx) => {
 router.use(authMiddleware);
 
 // Edit folder name
-router.put("/folders/:id", async (ctx) => {
+router.put("/api/folders/:id", async (ctx) => {
   const id = parseInt(ctx.params.id);
   const body = await ctx.request.body({ type: "json" }).value;
   const { name } = body;
 
   try {
-    await dbOps.updateFolderName(id, name);
+    await dbOps.updateFolder(id, name);
+    ctx.response.body = { success: true };
+  } catch (error) {
+    ctx.response.status = 500;
+    ctx.response.body = { error: error.message };
+  }
+});
+
+// PATCH route for renaming folder (same as PUT route)
+router.patch("/api/folders/:id", async (ctx) => {
+  const id = parseInt(ctx.params.id);
+  const body = await ctx.request.body({ type: "json" }).value;
+  const { name } = body;
+
+  try {
+    await dbOps.updateFolder(id, name);
     ctx.response.body = { success: true };
   } catch (error) {
     ctx.response.status = 500;
