@@ -1,7 +1,5 @@
 <template>
-  <div class="container">
-    <FileExplorer />
-  </div>
+  <FileExplorer />
 </template>
 
 <script setup lang="ts">
@@ -24,20 +22,11 @@ body {
   background-color: var(--background-color);
   color: var(--text-color);
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-}
-
-.container {
+  padding: 0;
+  width: 100vw;
   height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.header {
-  text-align: center;
-  padding: 2rem;
-  background: var(--surface-color);
-  border-bottom: 1px solid var(--border-color);
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 h1 {
@@ -120,5 +109,39 @@ input:focus {
 .context-menu-item .material-icons {
   font-size: 1.2rem;
   color: var(--text-secondary);
+}
+
+.columns-wrapper {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  overflow-x: auto;
+  gap: 16px;
+  padding: 16px;
+}
+
+.column-container {
+  flex: 1 1 0%;
+  min-width: 300px;
+  overflow-y: auto;
+  padding: 12px;
+  border-right: 1px solid #333;
+  background: #1a1a1a;
+  border-radius: 8px;
+}
+
+@media (min-width: 1200px) {
+  .columns-wrapper {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(300px, 1fr));
+    justify-content: center;
+    max-width: 1800px;
+    margin: 0 auto;
+  }
+  
+  .column-container {
+    min-width: 0;
+    width: 100%;
+  }
 }
 </style>

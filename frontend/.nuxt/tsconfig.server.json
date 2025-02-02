@@ -101,6 +101,9 @@
       "public": [
         "../public"
       ],
+      "public/*": [
+        "../public/*"
+      ],
       "#build": [
         "./"
       ],

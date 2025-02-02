@@ -1,24 +1,26 @@
 <template>
   <div class="file-explorer">
     <div class="explorer-content">
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <button v-if="!isLoggedIn" @click="showLoginModal = true" class="button">
-            <span class="material-icons">login</span>
-            Login for Admin
-          </button>
+      <nav class="toolbar">
+        <div class="nav-items">
+          <template v-if="!isLoggedIn">
+            <div class="nav-item" @click="showLoginModal = true">
+              <span class="material-icons">login</span>
+              <span>Login for Admin</span>
+            </div>
+          </template>
           <template v-else>
-            <button class="button" @click="importFolderStructure" style="margin-right: 10px;">
+            <div class="nav-item" @click="importFolderStructure">
               <span class="material-icons">folder_open</span>
-              Import Structure
-            </button>
-            <button class="button" @click="logout">
+              <span>Import Structure</span>
+            </div>
+            <div class="nav-item" @click="logout">
               <span class="material-icons">logout</span>
-              Logout
-            </button>
+              <span>Logout</span>
+            </div>
           </template>
         </div>
-      </div>
+      </nav>
 
       <div class="structures-grid">
         <div v-for="structure in structures" :key="structure.id" class="structure-column">
@@ -63,18 +65,26 @@
 
     <!-- Login Modal -->
     <div v-if="showLoginModal" class="modal">
-      <div class="modal-content">
-        <h2>Admin Login</h2>
-        <input 
-          type="password" 
-          v-model="password" 
-          placeholder="Enter admin password"
-          @keyup.enter="login"
-          class="input"
-        />
-        <div class="modal-actions">
-          <button @click="showLoginModal = false" class="button secondary">Cancel</button>
-          <button @click="login" class="button">Login</button>
+      <div class="modal-content login-modal">
+        <div class="modal-header">
+          <h2>Admin Login</h2>
+          <span class="material-icons close-icon" @click="showLoginModal = false">close</span>
+        </div>
+        <div class="modal-body">
+          <div class="input-group">
+            <label for="password">Password</label>
+            <input 
+              type="password" 
+              id="password"
+              v-model="password"
+              placeholder="Enter admin password"
+              @keyup.enter="login"
+            >
+          </div>
+          <div class="button-group">
+            <button class="btn btn-secondary" @click="showLoginModal = false">Cancel</button>
+            <button class="btn btn-primary" @click="login">Login</button>
+          </div>
         </div>
       </div>
     </div>
@@ -795,7 +805,7 @@ const handleRename = async ({ id, type }: { id: number, type: 'file' | 'folder' 
 
     if (!response.ok) throw new Error(`Failed to rename ${type}`);
     await loadStructures();
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error renaming ${type}:`, error);
     alert(`Failed to rename ${type}`);
   }
@@ -818,7 +828,7 @@ const handleMove = async ({ id, type }: { id: number, type: 'file' | 'folder' })
 
     if (!response.ok) throw new Error(`Failed to move ${type}`);
     await loadStructures();
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error moving ${type}:`, error);
     alert(`Failed to move ${type}`);
   }
@@ -839,7 +849,7 @@ const handleDelete = async ({ id, type }: { id: number, type: 'file' | 'folder' 
 
     if (!response.ok) throw new Error(`Failed to delete ${type}`);
     await loadStructures();
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Error deleting ${type}:`, error);
     alert(`Failed to delete ${type}`);
   }
@@ -875,89 +885,102 @@ const handleComment = async ({ id, type }: { id: number, type: 'file' | 'folder'
 
 <style scoped>
 .file-explorer {
+  width: 100vw;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  overflow: hidden;
   background: var(--background-color);
 }
 
 .explorer-content {
   flex: 1;
-  padding: 20px;
-  overflow: auto;
-}
-
-.toolbar {
-  padding: 12px 16px;
-  background-color: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.toolbar-left {
   display: flex;
-  align-items: center;
-}
-
-.button {
-  padding: 6px 12px;
-  background-color: #2a2a2a;
-  color: #fff;
-  border: 1px solid #444;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.button:hover {
-  background-color: #3a3a3a;
-  border-color: #555;
-}
-
-.material-icons {
-  font-size: 18px;
-  opacity: 0.9;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
 }
 
 .structures-grid {
+  flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-  padding: 20px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  padding: 16px;
+  overflow: auto;
+  margin: 0;
 }
 
 .structure-column {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 15px;
-  min-height: 200px;
-}
-
-.structure-title {
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 16px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  position: relative;
-  padding-right: 30px;  /* Make room for delete button */
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
 }
 
-.structure-title:hover {
-  text-decoration: underline;
+@media (max-width: 1200px) {
+  .structures-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .structures-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.toolbar {
+  margin: 16px 16px 0 16px;
+  display: flex;
+  align-items: center;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.nav-items {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-color);
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  background: var(--hover-color);
+}
+
+.nav-item .material-icons {
+  font-size: 20px;
+  opacity: 0.9;
+}
+
+.nav-item span {
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .folder-tree {
+  flex: 1;
   overflow: auto;
-  max-height: calc(100vh - 250px);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .context-menu {
@@ -990,25 +1013,133 @@ const handleComment = async ({ id, type }: { id: number, type: 'file' | 'folder'
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.75);
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 100;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
 .modal-content {
-  background-color: #1a1a1a;
-  padding: 24px;
-  border-radius: 8px;
-  min-width: 300px;
+  background: var(--surface-color);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 400px;
+  margin: 16px;
+  overflow: hidden;
 }
 
-.modal-actions {
+.login-modal {
+  animation: modal-appear 0.3s ease;
+}
+
+@keyframes modal-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.close-icon {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.close-icon:hover {
+  opacity: 1;
+  background: var(--hover-color);
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.input-group {
+  margin-bottom: 24px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.input-group input {
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-color);
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.button-group {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 12px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  background: var(--hover-color);
+  color: var(--text-color);
+}
+
+.btn-secondary:hover {
+  background: var(--surface-color);
 }
 
 .comments-list {

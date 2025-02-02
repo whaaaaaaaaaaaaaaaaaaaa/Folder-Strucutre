@@ -1,34 +1,33 @@
 <template>
   <div 
     class="folder-node"
-    :style="{ marginLeft: `${level * 20}px` }"
+    :style="{ paddingLeft: `${level * 6}px` }"
     :class="{ 'is-dragging': isDragging }"
     draggable="true"
     @dragstart="onDragStart"
     @dragend="onDragEnd"
     @dragover.prevent
     @drop.prevent="onDrop"
-    @contextmenu.prevent="showContextMenu"
+    @contextmenu.stop.prevent="showContextMenu"
   >
     <div class="folder-header" @click="onFolderClick">
       <span class="folder-icon" :class="{ 'is-expanded': isExpanded }">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" :fill="isExpanded ? 'none' : 'currentColor'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
         </svg>
       </span>
       <span class="folder-name">{{ folder.name }}</span>
-      <span class="folder-count">
-        ({{ folder.subfolder_count }} folders, {{ folder.file_count }} files)
-      </span>
     </div>
 
-    <div v-show="isExpanded" class="folder-content" :class="{ 'expanded': isExpanded }">
+    <div v-show="isExpanded" class="folder-content">
+      <div class="connector-line" v-if="folder.files.length > 0 || folder.children.length > 0"></div>
+      
       <!-- Files -->
       <div 
         v-for="file in folder.files" 
         :key="file.id"
         class="file-item"
-        @contextmenu.prevent="showFileContextMenu($event, file)"
+        @contextmenu.stop.prevent="showFileContextMenu($event, file)"
       >
         <span class="file-icon">
           <FileIcon :type="getFileType(file.name)" />
@@ -43,11 +42,13 @@
         :folder="childFolder"
         :structure-id="structureId"
         :level="level + 1"
+        :is-authenticated="isAuthenticated"
         @toggle="$emit('toggle', $event)"
         @select="$emit('select', $event)"
         @drag-start="$emit('drag-start', $event)"
         @drag-end="$emit('drag-end')"
         @drop="$emit('drop', $event)"
+        @refresh="$emit('refresh')"
       />
     </div>
 
@@ -57,12 +58,21 @@
       :y="menuY"
       :type="menuType"
       :is-authenticated="isAuthenticated"
-      @add-folder="$emit('add-folder', folder.id)"
-      @add-file="$emit('add-file', folder.id)"
-      @rename="$emit('rename', { id: menuItemId, type: menuType })"
-      @move="$emit('move', { id: menuItemId, type: menuType })"
-      @delete="$emit('delete', { id: menuItemId, type: menuType })"
-      @comment="$emit('comment', { id: menuItemId, type: menuType })"
+      @add-folder="handleAddFolder(menuItemId)"
+      @add-file="handleAddFile(menuItemId)"
+      @rename="handleRename({ id: menuItemId, type: menuType })"
+      @move="handleMove({ id: menuItemId, type: menuType })"
+      @delete="handleDelete({ id: menuItemId, type: menuType })"
+      @comment="handleComment({ id: menuItemId, type: menuType })"
+    />
+
+    <InputModal
+      :show="showInputModal"
+      :title="inputModalConfig.title"
+      :placeholder="inputModalConfig.placeholder"
+      :initial-value="inputModalConfig.initialValue"
+      @submit="handleInputModalSubmit"
+      @close="showInputModal = false"
     />
   </div>
 </template>
@@ -70,8 +80,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useFolderStructureStore } from '../stores/folderStructure';
+import { useAuthStore } from '../stores/auth';
 import ContextMenu from './ContextMenu.vue';
 import FileIcon from './FileIcon.vue';
+import InputModal from './InputModal.vue';
+import { onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({
   folder: {
@@ -92,225 +105,404 @@ const props = defineProps({
   }
 });
 
+const authStore = useAuthStore();
+const folderStore = useFolderStructureStore();
+
 const emit = defineEmits([
   'toggle',
   'select',
   'drag-start',
   'drag-end',
   'drop',
-  'add-folder',
-  'add-file',
-  'rename',
-  'move',
-  'delete',
-  'comment'
+  'refresh'
 ]);
 
-const store = useFolderStructureStore();
-const isExpanded = computed(() => store.isExpanded(props.structureId, props.folder.id));
-
-const isDragging = ref(false);
-
-// Context menu state
 const showMenu = ref(false);
 const menuX = ref(0);
 const menuY = ref(0);
-const menuType = ref<'file' | 'folder'>('folder');
+const menuType = ref<'folder' | 'file'>('folder');
 const menuItemId = ref<number | null>(null);
+const isExpanded = ref(false);
+const isDragging = ref(false);
+
+const showInputModal = ref(false);
+const inputModalConfig = ref({
+  title: '',
+  placeholder: '',
+  initialValue: '',
+  action: '',
+  data: null as any
+});
 
 // Close menu when clicking outside
-const closeContextMenu = () => {
+const closeContextMenu = (event?: MouseEvent) => {
+  if (event) {
+    event.preventDefault();
+  }
   showMenu.value = false;
 };
 
-import { onMounted, onUnmounted } from 'vue';
 onMounted(() => {
-  document.addEventListener('click', closeContextMenu);
+  window.addEventListener('click', closeContextMenu);
+  window.addEventListener('contextmenu', closeContextMenu);
 });
 
 onUnmounted(() => {
-  document.removeEventListener('click', closeContextMenu);
+  window.removeEventListener('click', closeContextMenu);
+  window.removeEventListener('contextmenu', closeContextMenu);
 });
 
 const showContextMenu = (event: MouseEvent) => {
+  console.log('Right click detected');
+  console.log('Auth state:', props.isAuthenticated);
+  
+  if (!props.isAuthenticated) {
+    console.log('Not authenticated, skipping menu');
+    return;
+  }
+  
   event.preventDefault();
+  event.stopPropagation();
+  
   menuX.value = event.clientX;
   menuY.value = event.clientY;
   menuType.value = 'folder';
   menuItemId.value = props.folder.id;
   showMenu.value = true;
+  
+  console.log('Menu state:', {
+    show: showMenu.value,
+    x: menuX.value,
+    y: menuY.value,
+    type: menuType.value,
+    itemId: menuItemId.value
+  });
 };
 
 const showFileContextMenu = (event: MouseEvent, file: any) => {
+  console.log('File right click detected');
+  console.log('Auth state:', props.isAuthenticated);
+  
+  if (!props.isAuthenticated) {
+    console.log('Not authenticated, skipping menu');
+    return;
+  }
+  
   event.preventDefault();
+  event.stopPropagation();
+  
   menuX.value = event.clientX;
   menuY.value = event.clientY;
   menuType.value = 'file';
   menuItemId.value = file.id;
   showMenu.value = true;
+  
+  console.log('Menu state:', {
+    show: showMenu.value,
+    x: menuX.value,
+    y: menuY.value,
+    type: menuType.value,
+    itemId: menuItemId.value
+  });
 };
 
 const onFolderClick = () => {
-  console.log('Folder clicked:', props.folder.id);
-  store.toggleFolder(props.structureId, props.folder.id);
+  isExpanded.value = !isExpanded.value;
+  emit('toggle', props.folder.id);
+};
+
+const handleInputModalSubmit = async (value: string) => {
+  switch (inputModalConfig.value.action) {
+    case 'comment':
+      await submitComment(value, inputModalConfig.value.data);
+      break;
+    case 'rename':
+      await submitRename(value, inputModalConfig.value.data);
+      break;
+    case 'addFolder':
+      await submitAddFolder(value, inputModalConfig.value.data);
+      break;
+    case 'addFile':
+      await submitAddFile(value, inputModalConfig.value.data);
+      break;
+  }
+};
+
+const submitComment = async (content: string, { id, type }: { id: number, type: string }) => {
+  try {
+    const requestData = {
+      text: content,
+      color: '#FFD700',
+      target_type: type,
+      target_id: id,
+      x: 0,
+      y: 0
+    };
+
+    console.log('Submitting comment:', requestData);
+
+    const response = await fetch('http://localhost:8000/api/comments', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestData),
+    });
+
+    const responseData = await response.json();
+    console.log('Response:', { status: response.status, data: responseData });
+
+    if (!response.ok) {
+      throw new Error(responseData.error || `Server error: ${response.status}`);
+    }
+
+    emit('refresh');
+    showMenu.value = false;
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    alert(`Failed to add comment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+const handleComment = (data: { id: number, type: string }) => {
+  inputModalConfig.value = {
+    title: 'Add Comment',
+    placeholder: 'Enter your comment...',
+    initialValue: '',
+    action: 'comment',
+    data
+  };
+  showInputModal.value = true;
+};
+
+const handleAddFolder = (parentId: number) => {
+  inputModalConfig.value = {
+    title: 'Add Folder',
+    placeholder: 'Enter folder name...',
+    initialValue: '',
+    action: 'addFolder',
+    data: { parentId }
+  };
+  showInputModal.value = true;
+};
+
+const handleAddFile = (folderId: number) => {
+  inputModalConfig.value = {
+    title: 'Add File',
+    placeholder: 'Enter file name...',
+    initialValue: '',
+    action: 'addFile',
+    data: { folderId }
+  };
+  showInputModal.value = true;
+};
+
+const handleRename = (data: { id: number, type: string }) => {
+  const currentName = data.type === 'folder' 
+    ? props.folder.name 
+    : props.folder.files.find(f => f.id === data.id)?.name || '';
+    
+  inputModalConfig.value = {
+    title: `Rename ${data.type}`,
+    placeholder: 'Enter new name...',
+    initialValue: currentName,
+    action: 'rename',
+    data
+  };
+  showInputModal.value = true;
+};
+
+const submitRename = async (name: string, { id, type }: { id: number, type: string }) => {
+  try {
+    if (type === 'folder') {
+      await folderStore.renameFolder(id, name);
+    } else {
+      await folderStore.renameFile(id, name);
+    }
+    emit('refresh');
+    showMenu.value = false;
+  } catch (error) {
+    console.error('Error renaming item:', error);
+  }
+};
+
+const submitAddFolder = async (name: string, { parentId }: { parentId: number }) => {
+  try {
+    await folderStore.addFolder({
+      name,
+      structureId: props.structureId,
+      parentId
+    });
+    emit('refresh');
+    showMenu.value = false;
+  } catch (error) {
+    console.error('Error adding folder:', error);
+  }
+};
+
+const submitAddFile = async (name: string, { folderId }: { folderId: number }) => {
+  try {
+    await folderStore.addFile({
+      name,
+      folderId,
+      structureId: props.structureId
+    });
+    emit('refresh');
+    showMenu.value = false;
+  } catch (error) {
+    console.error('Error adding file:', error);
+  }
+};
+
+const handleMove = async ({ id, type }: { id: number | null; type: string }) => {
+  if (!id) return;
+  try {
+    const targetFolderId = prompt('Enter target folder ID:');
+    if (!targetFolderId) return;
+    
+    if (type === 'folder') {
+      await folderStore.moveFolder(id, parseInt(targetFolderId));
+    } else {
+      await folderStore.moveFile(id, parseInt(targetFolderId));
+    }
+    emit('refresh');
+    showMenu.value = false;
+  } catch (error) {
+    console.error('Error moving item:', error);
+  }
+};
+
+const handleDelete = async ({ id, type }: { id: number | null; type: string }) => {
+  if (!id) return;
+  try {
+    const confirm = window.confirm('Are you sure you want to delete this item?');
+    if (!confirm) return;
+    
+    if (type === 'folder') {
+      await folderStore.deleteFolder(id);
+    } else {
+      await folderStore.deleteFile(id);
+    }
+    emit('refresh');
+    showMenu.value = false;
+  } catch (error) {
+    console.error('Error deleting item:', error);
+  }
 };
 
 const onDragStart = (event: DragEvent) => {
-  event.dataTransfer?.setData('text/plain', JSON.stringify({
-    id: props.folder.id,
-    type: 'folder',
-    structureId: props.structureId
-  }));
-  emit('drag-start', props.folder);
+  isDragging.value = true;
+  emit('drag-start', { id: props.folder.id, type: 'folder' });
 };
 
 const onDragEnd = () => {
+  isDragging.value = false;
   emit('drag-end');
 };
 
 const onDrop = (event: DragEvent) => {
-  event.stopPropagation();
-  const data = event.dataTransfer?.getData('text/plain');
-  if (data) {
-    emit('drop', {
-      targetId: props.folder.id,
-      targetStructureId: props.structureId,
-      data: JSON.parse(data)
-    });
-  }
+  emit('drop', { targetId: props.folder.id });
 };
 
 const getFileType = (filename: string): string => {
   const ext = filename.split('.').pop()?.toLowerCase() || '';
-  
-  const typeMap: { [key: string]: string } = {
-    // Documents
-    'pdf': 'pdf',
-    'doc': 'doc',
-    'docx': 'doc',
-    'txt': 'doc',
-    'rtf': 'doc',
-    'odt': 'doc',
-    
-    // Images
-    'jpg': 'image',
-    'jpeg': 'image',
-    'png': 'image',
-    'gif': 'image',
-    'svg': 'image',
-    'webp': 'image',
-    
-    // Code
-    'js': 'code',
-    'ts': 'code',
-    'py': 'code',
-    'java': 'code',
-    'cpp': 'code',
-    'html': 'code',
-    'css': 'code',
-    'json': 'code',
-    
-    // Archives
-    'zip': 'zip',
-    'rar': 'zip',
-    '7z': 'zip',
-    'tar': 'zip',
-    'gz': 'zip',
-    
-    // Media
-    'mp3': 'audio',
-    'wav': 'audio',
-    'ogg': 'audio',
-    'mp4': 'video',
-    'avi': 'video',
-    'mov': 'video',
-    'wmv': 'video'
-  };
-  
-  return typeMap[ext] || 'default';
+  switch (ext) {
+    case 'pdf':
+      return 'pdf';
+    case 'doc':
+    case 'docx':
+      return 'word';
+    case 'xls':
+    case 'xlsx':
+      return 'excel';
+    case 'ppt':
+    case 'pptx':
+      return 'powerpoint';
+    case 'jpg':
+    case 'jpeg':
+    case 'png':
+    case 'gif':
+      return 'image';
+    case 'txt':
+      return 'text';
+    default:
+      return 'file';
+  }
 };
 </script>
 
 <style scoped>
 .folder-node {
   position: relative;
-  z-index: 1;
+  padding: 2px 0;
+  user-select: none;
 }
 
 .folder-header {
-  position: relative;
   display: flex;
   align-items: center;
-  padding: 1px 0 1px 4px;
+  padding: 2px 6px;
   cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  position: relative;
   z-index: 2;
+}
+
+.folder-header:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.folder-icon {
+  display: inline-flex;
+  margin-right: 6px;
+  color: #FFD700;
+  width: 16px;
+  text-align: center;
+}
+
+.folder-name {
+  color: #fff;
 }
 
 .folder-content {
   position: relative;
-  margin-left: 11px;
-  border-left: 1px solid #555;
-  padding: 1px 0;
-  z-index: 1;
   overflow: hidden;
-  transition: max-height 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s ease 0.1s, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-6px);
+  padding-left: 6px;
 }
 
-.folder-content.expanded {
-  max-height: 1000px;
-  opacity: 1;
-  transform: translateY(0);
-  animation: gentle-appear 0.4s ease;
-}
-
-@keyframes gentle-appear {
-  0% { opacity: 0; transform: translateY(-4px); }
-  50% { opacity: 1; transform: translateY(1px); }
-  100% { opacity: 1; transform: translateY(0); }
+.connector-line {
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 4px;
+  width: 1px;
+  background-color: #404040;
 }
 
 .file-item {
   position: relative;
   display: flex;
   align-items: center;
-  padding: 1px 0 1px 11px;
-  font-size: 14px;
-  color: #ddd;
-  z-index: 2;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
 
-.folder-icon,
 .file-icon {
-  margin-right: 8px;
-  font-size: 16px;
-  color: #aaa;
-  width: 14px;
+  display: inline-flex;
+  margin-right: 6px;
+  color: #A9A9A9;
+  width: 16px;
   text-align: center;
-  position: relative;
-  z-index: 3;
 }
 
-.folder-icon svg {
-  fill: #aaa;
-  transition: fill 0.2s ease;
-}
-
-.folder-icon.is-expanded svg {
-  fill: none;
-  stroke: #aaa;
-}
-
-.folder-name {
-  margin-right: 2px;
+.file-name {
   color: #fff;
 }
 
-.folder-count {
-  margin-left: 2px;
-  color: #666;
-  font-size: 12px;
+.is-dragging {
+  opacity: 0.5;
 }
 </style>

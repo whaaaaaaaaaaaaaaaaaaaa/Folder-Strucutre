@@ -33,15 +33,32 @@ router.get("/api/comments/:itemId", async (ctx) => {
 router.post("/api/comments", async (ctx) => {
   try {
     const body = await ctx.request.body({ type: "json" }).value;
+    console.log("Received comment data:", body);
+
+    // Validate required fields
+    if (!body.text || !body.target_type || !body.target_id) {
+      ctx.response.status = 400;
+      ctx.response.body = { error: "Missing required fields" };
+      return;
+    }
+
+    // Validate target_type
+    if (body.target_type !== 'file' && body.target_type !== 'folder') {
+      ctx.response.status = 400;
+      ctx.response.body = { error: "Invalid target_type" };
+      return;
+    }
+
     const comment = await dbOps.addComment(
-      body.item_id,
-      body.item_type,
+      body.target_id,
+      body.target_type,
       body.text,
       body.color || "#FFD700",
-      body.x,
-      body.y
+      body.x || 0,
+      body.y || 0
     );
-    wsManager.notifyComment(body.item_id); // Notify clients about new comment
+
+    wsManager.notifyComment(body.target_id);
     ctx.response.body = comment;
   } catch (error) {
     console.error("Error adding comment:", error);

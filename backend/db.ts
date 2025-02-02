@@ -66,6 +66,8 @@ interface CommentRecord extends RowObject {
   color: string;
   target_type: 'file' | 'folder';
   target_id: number;
+  x: number;
+  y: number;
   created_at: string;
   updated_at: string;
 }
@@ -110,6 +112,14 @@ export const dbOps = {
   initializeDatabase: async () => {
     try {
       const database = getDb();
+
+      // Function to get table info
+      const getTableInfo = (tableName: string) => {
+        console.log(`Table ${tableName} schema:`);
+        const columns = database.prepare(`PRAGMA table_info(${tableName})`).all();
+        console.log(columns);
+        return columns;
+      };
 
       console.log("Creating structures table if not exists");
       database.prepare(`
@@ -180,18 +190,49 @@ export const dbOps = {
         )
       `).run();
 
-      console.log("Creating comments table if not exists");
-      database.prepare(`
-        CREATE TABLE IF NOT EXISTS comments (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          content TEXT NOT NULL,
-          color TEXT NOT NULL DEFAULT '#FFD700',
-          target_type TEXT NOT NULL CHECK (target_type IN ('file', 'folder')),
-          target_id INTEGER NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `).run();
+      console.log("Creating or updating comments table");
+      try {
+        // First try to create the table if it doesn't exist
+        database.prepare(`
+          CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT NOT NULL,
+            color TEXT NOT NULL DEFAULT '#FFD700',
+            target_type TEXT NOT NULL CHECK (target_type IN ('file', 'folder')),
+            target_id INTEGER NOT NULL,
+            x INTEGER NOT NULL DEFAULT 0,
+            y INTEGER NOT NULL DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )
+        `).run();
+      } catch (error) {
+        console.log("Comments table exists, checking for needed columns");
+      }
+
+      // Check current schema
+      getTableInfo('comments');
+
+      // Add target_id column if it doesn't exist
+      try {
+        database.prepare("SELECT target_id FROM comments LIMIT 1").run();
+      } catch (error) {
+        console.log("Adding target_id column to comments table");
+        database.prepare("ALTER TABLE comments ADD COLUMN target_id INTEGER NOT NULL DEFAULT 0").run();
+      }
+
+      // Add x and y columns if they don't exist
+      try {
+        database.prepare("SELECT x, y FROM comments LIMIT 1").run();
+      } catch (error) {
+        console.log("Adding x and y columns to comments table");
+        database.prepare("ALTER TABLE comments ADD COLUMN x INTEGER NOT NULL DEFAULT 0").run();
+        database.prepare("ALTER TABLE comments ADD COLUMN y INTEGER NOT NULL DEFAULT 0").run();
+      }
+
+      // Check final schema
+      console.log("Final comments table schema:");
+      getTableInfo('comments');
 
       console.log("Database initialized successfully");
     } catch (error) {
@@ -396,24 +437,52 @@ export const dbOps = {
     return result as unknown as DbResult;
   },
 
-  addComment: async (targetId: number, targetType: 'file' | 'folder', content: string, color: string = '#FFD700'): Promise<CommentRecord> => {
+  addComment: async (targetId: number, targetType: 'file' | 'folder', text: string, color: string = '#FFD700', x: number = 0, y: number = 0): Promise<CommentRecord> => {
     try {
-      console.log("Adding comment:", { targetId, targetType, content, color });
       const database = getDb();
-      
-      const stmt = database.prepare(
-        "INSERT INTO comments (target_id, target_type, content, color) VALUES (?, ?, ?, ?) RETURNING *"
-      );
-      const result = stmt.all(targetId, targetType, content, color) as CommentRecord[];
-      
-      if (!result || result.length === 0) {
-        throw new Error("Failed to add comment");
+
+      // First verify that the target exists
+      if (targetType === 'file') {
+        const file = database.prepare("SELECT id FROM files WHERE id = ?").get(targetId);
+        if (!file) {
+          throw new Error('File not found');
+        }
+      } else {
+        const folder = database.prepare("SELECT id FROM folders WHERE id = ?").get(targetId);
+        if (!folder) {
+          throw new Error('Folder not found');
+        }
       }
 
-      console.log("Added comment successfully:", result[0]);
-      return result[0];
+      // Insert the comment
+      console.log("Inserting comment:", { targetId, targetType, text, color, x, y });
+      const result = database.prepare(`
+        INSERT INTO comments (content, color, target_type, target_id, x, y)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(text, color, targetType, targetId, x, y);
+
+      if (!isDbResult(result)) {
+        throw new Error('Failed to add comment');
+      }
+
+      const commentId = result.lastInsertId;
+      if (!commentId) {
+        throw new Error('Failed to get comment ID');
+      }
+
+      // Return the newly created comment
+      const comment = database.prepare(`
+        SELECT * FROM comments WHERE id = ?
+      `).get(commentId) as CommentRecord;
+
+      if (!comment) {
+        throw new Error('Failed to retrieve created comment');
+      }
+
+      console.log("Created comment:", comment);
+      return comment;
     } catch (error) {
-      console.error("Error adding comment:", error);
+      console.error('Error in addComment:', error);
       throw error;
     }
   },

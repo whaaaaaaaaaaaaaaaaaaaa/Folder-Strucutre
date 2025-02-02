@@ -67,18 +67,10 @@ app.use(async (ctx, next) => {
 });
 
 // CORS middleware
-app.use(async (ctx, next) => {
-  ctx.response.headers.set("Access-Control-Allow-Origin", "http://localhost:3000");
-  ctx.response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-  ctx.response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-  if (ctx.request.method === "OPTIONS") {
-    ctx.response.status = 200;
-    return;
-  }
-
-  await next();
-});
+app.use(oakCors({
+  origin: ["http://localhost:3000", "http://192.168.50.8:3000"],
+  credentials: true,
+}));
 
 // Load environment variables
 try {
@@ -258,5 +250,5 @@ Deno.addSignalListener("SIGINT", shutdown);
 
 // Start server
 const port = 8000;
-console.log(`Server running on http://localhost:${port}`);
-await app.listen({ port });
+console.log(`Server running on http://0.0.0.0:${port}`);
+await app.listen({ port, hostname: "0.0.0.0" });

@@ -288,6 +288,205 @@ export const useFolderStructureStore = defineStore('folderStructure', {
         console.error(`Error creating ${item.type}:`, error)
         throw error
       }
+    },
+
+    async addFolder({ name, structureId, parentId }: { name: string; structureId: number; parentId: number | null }) {
+      try {
+        const response = await fetch(`${API_URL}/api/folders`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`
+          },
+          body: JSON.stringify({ name, structure_id: structureId, parent_id: parentId })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to add folder');
+        }
+
+        await this.loadFolders(structureId);
+      } catch (error) {
+        console.error('Error adding folder:', error);
+        throw error;
+      }
+    },
+
+    async addFile({ name, folderId, structureId }: { name: string; folderId: number; structureId: number }) {
+      try {
+        const response = await fetch(`${API_URL}/api/files`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`
+          },
+          body: JSON.stringify({ name, folder_id: folderId, structure_id: structureId })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to add file');
+        }
+
+        await this.loadFolders(structureId);
+      } catch (error) {
+        console.error('Error adding file:', error);
+        throw error;
+      }
+    },
+
+    async renameFolder(id: number, name: string) {
+      try {
+        const response = await fetch(`${API_URL}/api/folders/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`
+          },
+          body: JSON.stringify({ name })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to rename folder');
+        }
+
+        await this.loadFolders(this.selectedStructure.id);
+      } catch (error) {
+        console.error('Error renaming folder:', error);
+        throw error;
+      }
+    },
+
+    async renameFile(id: number, name: string) {
+      try {
+        const response = await fetch(`${API_URL}/api/files/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`
+          },
+          body: JSON.stringify({ name })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to rename file');
+        }
+
+        await this.loadFolders(this.selectedStructure.id);
+      } catch (error) {
+        console.error('Error renaming file:', error);
+        throw error;
+      }
+    },
+
+    async moveFolder(id: number, targetFolderId: number) {
+      try {
+        const response = await fetch(`${API_URL}/api/folders/${id}/move`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`
+          },
+          body: JSON.stringify({ parent_id: targetFolderId })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to move folder');
+        }
+
+        await this.loadFolders(this.selectedStructure.id);
+      } catch (error) {
+        console.error('Error moving folder:', error);
+        throw error;
+      }
+    },
+
+    async moveFile(id: number, targetFolderId: number) {
+      try {
+        const response = await fetch(`${API_URL}/api/files/${id}/move`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`
+          },
+          body: JSON.stringify({ folder_id: targetFolderId })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to move file');
+        }
+
+        await this.loadFolders(this.selectedStructure.id);
+      } catch (error) {
+        console.error('Error moving file:', error);
+        throw error;
+      }
+    },
+
+    async deleteFolder(id: number) {
+      try {
+        const response = await fetch(`${API_URL}/api/folders/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${this.authToken}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete folder');
+        }
+
+        await this.loadFolders(this.selectedStructure.id);
+      } catch (error) {
+        console.error('Error deleting folder:', error);
+        throw error;
+      }
+    },
+
+    async deleteFile(id: number) {
+      try {
+        const response = await fetch(`${API_URL}/api/files/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${this.authToken}`
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete file');
+        }
+
+        await this.loadFolders(this.selectedStructure.id);
+      } catch (error) {
+        console.error('Error deleting file:', error);
+        throw error;
+      }
+    },
+
+    async addComment({ targetId, targetType, content, color }: { targetId: number; targetType: string; content: string; color: string }) {
+      try {
+        const response = await fetch(`${API_URL}/api/comments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.authToken}`
+          },
+          body: JSON.stringify({
+            target_id: targetId,
+            target_type: targetType,
+            content,
+            color
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to add comment');
+        }
+
+        await this.loadComments();
+      } catch (error) {
+        console.error('Error adding comment:', error);
+        throw error;
+      }
     }
   }
 })

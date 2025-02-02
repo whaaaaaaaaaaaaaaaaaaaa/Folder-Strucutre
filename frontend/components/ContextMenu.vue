@@ -1,6 +1,6 @@
 <template>
   <div 
-    v-if="show && isAuthenticated"
+    v-if="show"
     class="context-menu"
     :style="{ top: `${y}px`, left: `${x}px` }"
     @click.stop
